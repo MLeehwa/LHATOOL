@@ -1,0 +1,6 @@
+# Netlify 리다이렉트 설정
+# index.html을 기본 페이지로 설정 (로그인 페이지)
+/ /index.html 200
+
+# SPA 라우팅을 위한 fallback
+/* /index.html 200

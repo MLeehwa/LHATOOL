@@ -1,0 +1,10 @@
+{
+  "name": "lhatool",
+  "version": "1.0.0",
+  "description": "Pure HTML/JS Tool Management System",
+  "main": "index.html",
+  "scripts": {},
+  "keywords": ["tool", "management", "html", "javascript"],
+  "author": "LEEHWA AMERICA",
+  "license": "MIT"
+}

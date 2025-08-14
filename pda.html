@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>공구 관리 시스템</title>
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 15px;
+            color: white;
+        }
+
+        .back-btn {
+            position: absolute;
+            left: 20px;
+            top: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            backdrop-filter: blur(10px);
+        }
+
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            text-align: center;
+        }
+
+        .mode-selection {
+            margin-bottom: 40px;
+        }
+
+        .mode-selection h2 {
+            font-size: 2rem;
+            color: #2c3e50;
+            margin-bottom: 30px;
+        }
+
+        .mode-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .mode-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 30px 50px;
+            border-radius: 20px;
+            font-size: 1.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+            min-width: 200px;
+        }
+
+        .mode-btn:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 30px rgba(102, 126, 234, 0.4);
+        }
+
+        .mode-btn.export {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            box-shadow: 0 8px 25px rgba(40, 167, 69, 0.3);
+        }
+
+        .mode-btn.export:hover {
+            box-shadow: 0 12px 30px rgba(40, 167, 69, 0.4);
+        }
+
+        .mode-btn.return {
+            background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+            box-shadow: 0 8px 25px rgba(255, 193, 7, 0.3);
+        }
+
+        .mode-btn.return:hover {
+            box-shadow: 0 12px 30px rgba(255, 193, 7, 0.4);
+        }
+
+        .scan-section {
+            display: none;
+            background: #f8f9fa;
+            padding: 40px;
+            border-radius: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .scan-section.active {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .scan-section h3 {
+            font-size: 2rem;
+            margin-bottom: 25px;
+            color: #2c3e50;
+        }
+
+        .scan-input {
+            width: 100%;
+            max-width: 500px;
+            padding: 25px 30px;
+            border: 3px solid #e9ecef;
+            border-radius: 15px;
+            font-size: 24px;
+            margin-bottom: 25px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .scan-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 5px rgba(102, 126, 234, 0.1);
+            transform: scale(1.02);
+        }
+
+        .scan-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 20px 40px;
+            border-radius: 15px;
+            font-size: 1.3rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .scan-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .scan-btn.export {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            box-shadow: 0 6px 20px rgba(40, 167, 69, 0.3);
+        }
+
+        .scan-btn.return {
+            background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+            box-shadow: 0 6px 20px rgba(255, 193, 7, 0.3);
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+        }
+
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+        }
+
+        .modal h3 {
+            font-size: 1.8rem;
+            margin-bottom: 25px;
+            color: #2c3e50;
+        }
+
+        .modal-input {
+            width: 100%;
+            padding: 20px;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            font-size: 18px;
+            margin-bottom: 25px;
+            text-align: center;
+            transition: border-color 0.3s ease;
+        }
+
+        .modal-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        .modal-btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .modal-btn.primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .modal-btn.secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .modal-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        /* 제품 정보 표시 스타일 */
+        .product-info {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-top: 25px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border: 2px solid #e9ecef;
+        }
+
+        .product-info h4 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 1.4rem;
+            text-align: center;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .product-details {
+            display: grid;
+            gap: 15px;
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .detail-row .label {
+            font-weight: 600;
+            color: #495057;
+            min-width: 80px;
+        }
+
+        .detail-row span:last-child {
+            color: #2c3e50;
+            font-weight: 500;
+            text-align: right;
+            flex: 1;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* 10인치 타블렛 최적화 */
+        @media (max-width: 1024px) {
+            .container {
+                margin: 10px;
+                padding: 15px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .mode-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .mode-btn {
+                min-width: 250px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin: 5px;
+                padding: 10px;
+            }
+            
+            .header h1 {
+                font-size: 1.8rem;
+            }
+            
+            .mode-btn {
+                padding: 25px 40px;
+                font-size: 1.3rem;
+                min-width: 200px;
+            }
+            
+            .scan-input {
+                font-size: 20px;
+                padding: 20px;
+            }
+            
+            .scan-btn {
+                font-size: 1.2rem;
+                padding: 18px 35px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <button class="back-btn" onclick="goBack()">← 인덱스로 돌아가기</button>
+            <h1>공구 관리</h1>
+            <p>타블렛 최적화 인터페이스</p>
+        </div>
+        <div class="main-content">
+            <!-- Initial Mode Selection -->
+            <div class="mode-selection" id="modeSelection">
+                <h2>📱 작업 모드 선택</h2>
+                <div class="mode-buttons">
+                    <button class="mode-btn export" onclick="selectMode('export')">
+                        📤 공구 반출
+                    </button>
+                    <button class="mode-btn return" onclick="selectMode('return')">
+                        📥 공구 반납
+                    </button>
+                </div>
+            </div>
+
+            <!-- Export Mode -->
+            <div class="scan-section" id="exportScanSection">
+                <div style="position: relative;">
+                    <button class="back-btn" onclick="goBackToModeSelection()" style="position: absolute; left: 0; top: 0; background: rgba(40, 167, 69, 0.2); color: #28a745; border: 2px solid #28a745;">
+                        ← 모드 선택으로
+                    </button>
+                    <h3>📤 공구 반출</h3>
+                </div>
+                <input type="text" class="scan-input" id="exportScanInput" placeholder="바코드를 스캔하거나 제품 ID를 입력하세요" autocomplete="off">
+                <button class="scan-btn export" onclick="scanForExport()">스캔 및 반출</button>
+                
+                <!-- 제품 상세 정보 표시 -->
+                <div id="exportProductInfo" class="product-info" style="display: none;">
+                    <h4>📋 제품 정보</h4>
+                    <div class="product-details">
+                        <div class="detail-row">
+                            <span class="label">제품명:</span>
+                            <span id="exportProductName">-</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="label">카테고리:</span>
+                            <span id="exportProductCategory">-</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="label">메이커:</span>
+                            <span id="exportProductMaker">-</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="label">모델명:</span>
+                            <span id="exportProductModel">-</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="label">바코드:</span>
+                            <span id="exportProductBarcode">-</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Return Mode -->
+            <div class="scan-section" id="returnScanSection">
+                <div style="position: relative;">
+                    <button class="back-btn" onclick="goBackToModeSelection()" style="position: absolute; left: 0; top: 0; background: rgba(255, 193, 7, 0.2); color: #e0a800; border: 2px solid #e0a800;">
+                        ← 모드 선택으로
+                    </button>
+                    <h3>📥 공구 반납</h3>
+                </div>
+                <input type="text" class="scan-input" id="returnScanInput" placeholder="바코드를 스캔하거나 제품 ID를 입력하세요" autocomplete="off">
+                <button class="scan-btn return" onclick="scanForReturn()">스캔 및 반납</button>
+                
+                <!-- 제품 상세 정보 표시 -->
+                <div id="returnProductInfo" class="product-info" style="display: none;">
+                    <h4>📋 제품 정보</h4>
+                    <div class="product-details">
+                        <div class="detail-row">
+                            <span class="label">제품명:</span>
+                            <span id="returnProductName">-</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="label">카테고리:</span>
+                            <span id="returnProductCategory">-</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="label">메이커:</span>
+                            <span id="returnProductMaker">-</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="label">모델명:</span>
+                            <span id="returnProductModel">-</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="label">바코드:</span>
+                            <span id="returnProductBarcode">-</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="label">반출자:</span>
+                            <span id="returnProductExportedBy">-</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="label">반출일:</span>
+                            <span id="returnProductExportDate">-</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export User Name Modal -->
+    <div class="modal" id="exportUserNameModal">
+        <div class="modal-content">
+            <h3>📤 공구 반출</h3>
+            <p style="margin-bottom: 20px; color: #6c757d;">반출자 이름을 입력해주세요</p>
+            <input type="text" class="modal-input" id="exportUserName" placeholder="이름을 입력하세요" maxlength="20">
+            <div class="modal-buttons">
+                <button class="modal-btn primary" onclick="confirmExportUserName()">확인</button>
+                <button class="modal-btn secondary" onclick="closeModal('exportUserNameModal')">취소</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export Modal -->
+    <div class="modal" id="exportModal">
+        <div class="modal-content">
+            <h3>📤 공구 반출</h3>
+            <p style="margin-bottom: 20px; color: #6c757d;">반출자: <strong id="exportUserNameDisplay">-</strong></p>
+            <p style="margin-bottom: 20px; color: #6c757d; font-size: 0.9rem;">위 반출자로 공구를 반출하시겠습니까?</p>
+            <div class="modal-buttons">
+                <button class="modal-btn primary" onclick="confirmExport()">반출 확인</button>
+                <button class="modal-btn secondary" onclick="closeModal('exportModal')">취소</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Return Modal -->
+    <div class="modal" id="returnModal">
+        <div class="modal-content">
+            <h3>📥 공구 반납</h3>
+            <p style="margin-bottom: 20px; color: #6c757d;">반출자: <strong id="returnUserNameDisplay">-</strong></p>
+            <p style="margin-bottom: 20px; color: #6c757d; font-size: 0.9rem;">위 반출자가 공구를 반납하시겠습니까?</p>
+            <div class="modal-buttons">
+                <button class="modal-btn primary" onclick="confirmReturn()">반납 확인</button>
+                <button class="modal-btn secondary" onclick="closeModal('returnModal')">취소</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase.js"></script>
+    <script src="pda.js"></script>
+</body>
+</html>

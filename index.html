@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LEEHWA AMERICA - 공구 관리 시스템</title>
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .login-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        .main-menu-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+            width: 100%;
+            max-width: 800px;
+            text-align: center;
+        }
+
+        .logo {
+            margin-bottom: 30px;
+        }
+
+        .logo h1 {
+            color: #28a745;
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        .logo p {
+            color: #6c757d;
+            font-size: 1rem;
+        }
+
+        .login-form {
+            text-align: left;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 0.9rem;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: #f8f9fa;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #28a745;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.1);
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+
+        .login-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(40, 167, 69, 0.3);
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #28a745;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            display: none;
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            border: 1px solid #f5c6cb;
+        }
+
+        .success-message {
+            display: none;
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            border: 1px solid #c3e6cb;
+        }
+
+        .demo-info {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #28a745;
+        }
+
+        .demo-info h4 {
+            color: #28a745;
+            margin-bottom: 15px;
+        }
+
+        .demo-credentials {
+            text-align: left;
+        }
+
+        .demo-credentials p {
+            margin: 5px 0;
+            color: #6c757d;
+        }
+
+        /* 메인 메뉴 스타일 */
+        .main-menu {
+            display: none;
+        }
+
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-top: 30px;
+        }
+
+        .menu-card {
+            background: white;
+            border-radius: 20px;
+            padding: 40px 30px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: 3px solid transparent;
+        }
+
+        .menu-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .desktop-card:hover {
+            border-color: #667eea;
+            background: linear-gradient(135deg, #f8f9ff 0%, #f0f2ff 100%);
+        }
+
+        .pda-card:hover {
+            border-color: #28a745;
+            background: linear-gradient(135deg, #f8fff8 0%, #f0fff0 100%);
+        }
+
+        .menu-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            display: block;
+        }
+
+        .menu-card h3 {
+            font-size: 2rem;
+            color: #2c3e50;
+            margin-bottom: 15px;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 15px 30px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+        }
+
+        .desktop-card .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .desktop-card .btn:hover {
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .pda-card .btn {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
+        }
+
+        .pda-card .btn:hover {
+            box-shadow: 0 8px 25px rgba(40, 167, 69, 0.4);
+        }
+
+        .logout-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .logout-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(220, 53, 69, 0.3);
+        }
+
+        .container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            .main-menu-container {
+                padding: 25px;
+            }
+
+            .menu-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+
+            .menu-card {
+                padding: 30px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 로그인 화면 -->
+        <div class="login-container" id="loginContainer">
+            <div class="logo">
+                <h1>🔧 LEEHWA AMERICA</h1>
+                <p>공구 관리 시스템</p>
+            </div>
+
+            <form class="login-form" id="loginForm">
+                <div class="form-group">
+                    <label for="username">아이디</label>
+                    <input type="text" id="username" name="username" placeholder="아이디를 입력하세요" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">비밀번호</label>
+                    <input type="password" id="password" name="password" placeholder="비밀번호를 입력하세요" required>
+                </div>
+
+                <button type="submit" class="login-btn">
+                    로그인
+                </button>
+
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <p style="margin-top: 10px; color: #6c757d;">로그인 중...</p>
+                </div>
+
+                <div class="error-message" id="errorMessage">
+                    아이디 또는 비밀번호가 올바르지 않습니다.
+                </div>
+
+                <div class="success-message" id="successMessage">
+                    로그인 성공! 메뉴를 불러오는 중...
+                </div>
+            </form>
+
+            <div class="demo-info">
+                <h4>📋 데모 계정 정보</h4>
+                <p>시스템 테스트를 위한 데모 계정입니다.</p>
+                <div class="demo-credentials">
+                    <p><strong>아이디:</strong> leehwa</p>
+                    <p><strong>비밀번호:</strong> 1234</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 메인 메뉴 화면 -->
+        <div class="main-menu-container" id="mainMenuContainer" style="display: none;">
+            <button class="logout-btn" onclick="logout()">로그아웃</button>
+            
+            <div class="logo">
+                <h1>🔧 공구 관리 시스템</h1>
+                <p>사용할 모드를 선택하세요</p>
+            </div>
+
+            <div class="main-menu">
+                <div class="menu-grid">
+                    <!-- Desktop Menu -->
+                    <div class="menu-card desktop-card" onclick="selectPlatform('desktop')">
+                        <div class="menu-icon">💻</div>
+                        <h3>데스크탑</h3>
+                        <a href="#" class="btn">이동</a>
+                    </div>
+                    <!-- PDA Menu -->
+                    <div class="menu-card pda-card" onclick="selectPlatform('pda')">
+                        <div class="menu-icon">📱</div>
+                        <h3>타블렛</h3>
+                        <a href="#" class="btn">이동</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value.trim();
+            
+            // 에러 메시지 숨기기
+            document.getElementById('errorMessage').style.display = 'none';
+            document.getElementById('successMessage').style.display = 'none';
+            
+            // 로딩 표시
+            document.getElementById('loading').style.display = 'block';
+            
+            // 로그인 검증 (아이디: leehwa, 비밀번호: 1234)
+            if (username === 'leehwa' && password === '1234') {
+                // 로그인 성공
+                setTimeout(() => {
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('successMessage').style.display = 'block';
+                    
+                    // 1.5초 후 메인 메뉴 표시
+                    setTimeout(() => {
+                        document.getElementById('loginContainer').style.display = 'none';
+                        document.getElementById('mainMenuContainer').style.display = 'block';
+                        document.querySelector('.main-menu').style.display = 'block';
+                    }, 1500);
+                }, 1000);
+            } else {
+                // 로그인 실패
+                setTimeout(() => {
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('errorMessage').style.display = 'block';
+                    
+                    // 비밀번호 필드 초기화
+                    document.getElementById('password').value = '';
+                    document.getElementById('password').focus();
+                }, 1000);
+            }
+        });
+
+        function selectPlatform(platform) {
+            if (platform === 'desktop') {
+                window.location.href = 'desktop.html';
+            } else if (platform === 'pda') {
+                window.location.href = 'pda.html';
+            }
+        }
+
+        function logout() {
+            if (confirm('로그아웃하시겠습니까?')) {
+                // 로그인 화면으로 돌아가기
+                document.getElementById('mainMenuContainer').style.display = 'none';
+                document.getElementById('loginContainer').style.display = 'block';
+                
+                // 폼 초기화
+                document.getElementById('loginForm').reset();
+                document.getElementById('errorMessage').style.display = 'none';
+                document.getElementById('successMessage').style.display = 'none';
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+
+        // Enter 키로 로그인
+        document.getElementById('password').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                document.getElementById('loginForm').dispatchEvent(new Event('submit'));
+            }
+        });
+
+        // 페이지 로드 시 아이디 필드에 포커스
+        window.addEventListener('load', function() {
+            document.getElementById('username').focus();
+        });
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase.js"></script>
+</body>
+</html>

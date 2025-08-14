@@ -1,0 +1,1293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LEEHWA AMERICA - 공구 관리 시스템</title>
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        /* Main container - 더 넓게 */
+        .main-container {
+            max-width: 95vw; /* 화면 너비의 95% 사용 */
+            min-width: 1400px; /* 최소 너비 설정 */
+            margin: 0 auto;
+            padding: 20px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            overflow-x: auto; /* 가로 스크롤 허용 */
+        }
+
+        /* Container - 더 넓게 */
+        .container {
+            max-width: 95vw; /* 화면 너비의 95% 사용 */
+            min-width: 1400px; /* 최소 너비 설정 */
+            margin: 0 auto;
+            padding: 20px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            overflow-x: auto; /* 가로 스크롤 허용 */
+        }
+
+        .header {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            position: relative;
+        }
+
+        .back-btn {
+            position: absolute;
+            left: 30px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .back-btn:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-50%) scale(1.05);
+        }
+
+        .logout-btn {
+            position: absolute;
+            right: 30px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(220, 53, 69, 0.9);
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .logout-btn:hover {
+            background: rgba(220, 53, 69, 1);
+            transform: translateY(-50%) scale(1.05);
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            padding: 30px;
+        }
+
+        .nav-tabs {
+            display: flex;
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 5px;
+            margin-bottom: 30px;
+            border: 2px solid #e9ecef;
+        }
+
+        .nav-tab {
+            flex: 1;
+            padding: 15px 20px;
+            text-align: center;
+            background: transparent;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #6c757d;
+            transition: all 0.3s ease;
+        }
+
+        .nav-tab.active {
+            background: #28a745;
+            color: white;
+            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+        }
+
+        .nav-tab:hover:not(.active) {
+            background: #e9ecef;
+            color: #495057;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .form-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 30px;
+            border: 2px solid #e9ecef;
+        }
+
+        .form-section h3 {
+            color: #28a745;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            outline: none;
+            border-color: #28a745;
+        }
+
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            margin-right: 10px;
+        }
+
+        .btn-primary {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #218838;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .search-section {
+            margin-bottom: 25px;
+        }
+        
+        .search-section .btn {
+            margin-left: 15px;
+            padding: 15px 20px;
+            border-radius: 25px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .search-section .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        .search-row {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .search-row .btn {
+            flex-shrink: 0;
+        }
+        
+        .search-input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 25px;
+            font-size: 1rem;
+            background: #f8f9fa;
+        }
+        
+        .search-input:focus {
+            outline: none;
+            border-color: #28a745;
+            background: white;
+        }
+
+        .products-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        .products-table th {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 15px 12px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .products-table td {
+            padding: 12px;
+            border-bottom: 1px solid #e9ecef;
+            vertical-align: top;
+        }
+
+        .products-table tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        .products-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .tool-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .btn-sm {
+            padding: 8px 16px;
+            font-size: 0.9rem;
+        }
+
+        .btn-warning {
+            background: #ffc107;
+            color: #212529;
+        }
+
+        .btn-warning:hover {
+            background: #e0a800;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+        }
+
+        .btn-info {
+            background: #17a2b8;
+            color: white;
+        }
+
+        .btn-info:hover {
+            background: #138496;
+        }
+
+        .export-status {
+            background: #e3f2fd;
+            border: 2px dashed #2196f3;
+        }
+
+        .export-status h3 {
+            color: #2196f3;
+        }
+
+        .search-row {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .status-filter {
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 25px;
+            font-size: 1rem;
+            background: #f8f9fa;
+            min-width: 200px;
+        }
+
+        .status-filter:focus {
+            outline: none;
+            border-color: #007bff;
+            background: white;
+        }
+
+        .export-card {
+            border-left: 5px solid #007bff;
+            position: relative;
+        }
+
+        .export-card.overdue {
+            border-left-color: #ffc107;
+        }
+
+        .export-card.long-term {
+            border-left-color: #dc3545;
+        }
+
+        .export-time-info {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border: 1px solid #bbdefb;
+        }
+
+        .export-time-info h5 {
+            color: #1976d2;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+        }
+
+        .export-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 15px 0;
+        }
+
+        .export-detail-item {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 6px;
+            border-left: 3px solid #007bff;
+        }
+
+        .export-detail-item h6 {
+            color: #2c3e50;
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+        }
+
+        .export-detail-item p {
+            color: #6c757d;
+            font-size: 0.9rem;
+            margin: 0;
+        }
+
+        .days-exported {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #007bff;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .days-exported.overdue {
+            background: #ffc107;
+            color: #212529;
+        }
+
+        .days-exported.long-term {
+            background: #dc3545;
+        }
+
+        /* Export Status Table Styles - 더 넓게 */
+        .export-status-table {
+            width: 100%;
+            min-width: 1600px; /* 더 넓은 테이블 */
+            font-size: 0.9rem;
+            table-layout: fixed; /* 테이블 레이아웃 고정 */
+        }
+        
+        .export-status-table th,
+        .export-status-table td {
+            padding: 10px 8px;
+            text-align: center;
+            vertical-align: middle;
+            border-bottom: 1px solid #e9ecef;
+            white-space: normal; /* 긴 텍스트 줄바꿈 허용 */
+            word-wrap: break-word;
+            overflow: hidden;
+        }
+        
+        /* 컬럼별 너비 조정 */
+        .export-status-table th:nth-child(1), /* 제품명 */
+        .export-status-table td:nth-child(1) {
+            width: 120px;
+            min-width: 120px;
+        }
+        
+        .export-status-table th:nth-child(2), /* 카테고리 */
+        .export-status-table td:nth-child(2) {
+            width: 100px;
+            min-width: 100px;
+        }
+        
+        .export-status-table th:nth-child(3), /* 현재 상태 */
+        .export-status-table td:nth-child(3) {
+            width: 100px;
+            min-width: 100px;
+        }
+        
+        .export-status-table th:nth-child(4), /* 시리얼 번호 */
+        .export-status-table td:nth-child(4) {
+            width: 120px;
+            min-width: 120px;
+        }
+        
+        .export-status-table th:nth-child(5), /* 설명 */
+        .export-status-table td:nth-child(5) {
+            width: 150px;
+            min-width: 150px;
+        }
+        
+        .export-status-table th:nth-child(6), /* 구매일 */
+        .export-status-table td:nth-child(6) {
+            width: 100px;
+            min-width: 100px;
+        }
+        
+        .export-status-table th:nth-child(7), /* 등록일 */
+        .export-status-table td:nth-child(7) {
+            width: 100px;
+            min-width: 100px;
+        }
+        
+        .export-status-table th:nth-child(8), /* 반출자 */
+        .export-status-table td:nth-child(8) {
+            width: 100px;
+            min-width: 100px;
+        }
+        
+        .export-status-table th:nth-child(9), /* 반출일 */
+        .export-status-table td:nth-child(9) {
+            width: 100px;
+            min-width: 100px;
+        }
+        
+        .export-status-table th:nth-child(10), /* 반출 목적 */
+        .export-status-table td:nth-child(10) {
+            width: 120px;
+            min-width: 120px;
+        }
+        
+        .export-status-table th:nth-child(11), /* 반출 기간 */
+        .export-status-table td:nth-child(11) {
+            width: 100px;
+            min-width: 100px;
+        }
+        
+        .export-status-table th:nth-child(12), /* 작업 */
+        .export-status-table td:nth-child(12) {
+            width: 120px;
+            min-width: 120px;
+        }
+        
+        .export-status-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #495057;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        .export-status-table .description-cell,
+        .export-status-table .purpose-cell {
+            text-align: left;
+            line-height: 1.3;
+        }
+        
+        /* 반출 현황 컨테이너 스크롤 */
+        #exportStatusContainer {
+            overflow-x: auto;
+            max-width: 100%;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+        }
+        
+        /* 반출 현황 통계 카드 */
+        .export-status .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        /* 전체 페이지 스크롤 방지 */
+        body {
+            overflow-x: hidden;
+        }
+
+        /* 메인 컨테이너 가로 스크롤 */
+        .main-container,
+        .container {
+            overflow-x: auto;
+        }
+
+        @media (max-width: 768px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .products-table {
+                font-size: 0.9rem;
+            }
+            
+            .products-table th,
+            .products-table td {
+                padding: 8px 6px;
+            }
+            
+            .tool-actions {
+                flex-direction: column;
+                gap: 4px;
+            }
+            
+            .btn-sm {
+                padding: 6px 12px;
+                font-size: 0.8rem;
+            }
+            
+            .nav-tabs {
+                flex-direction: column;
+            }
+            
+            .back-btn {
+                position: static;
+                transform: none;
+                margin-bottom: 20px;
+                display: inline-block;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .main-container,
+            .container {
+                max-width: 95vw;
+                min-width: auto;
+                padding: 15px;
+                margin: 10px;
+            }
+            
+            .export-status-table {
+                min-width: 1200px; /* 모바일에서는 더 작게 */
+                font-size: 0.8rem;
+            }
+            
+            .export-status-table th,
+            .export-status-table td {
+                padding: 6px 4px;
+            }
+            
+            .stats {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 15px;
+            }
+            
+            .search-section {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .search-row {
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .main-container,
+            .container {
+                padding: 10px;
+                margin: 5px;
+            }
+            
+            .export-status-table {
+                min-width: 1000px;
+                font-size: 0.7rem;
+            }
+            
+            .stats {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+            
+            .header h1 {
+                font-size: 1.5rem;
+            }
+        }
+
+                 /* 큰 화면에서 최적화 */
+         @media (min-width: 1920px) {
+             .main-container,
+             .container {
+                 max-width: 1800px;
+             }
+             
+             .export-status-table {
+                 min-width: 1700px;
+             }
+         }
+         
+         /* Product Detail Modal Styles */
+         .product-detail-modal {
+             position: fixed;
+             top: 0;
+             left: 0;
+             width: 100%;
+             height: 100%;
+             background: rgba(0, 0, 0, 0.5);
+             z-index: 1000;
+             display: flex;
+             align-items: center;
+             justify-content: center;
+         }
+         
+         .modal-content {
+             background: white;
+             border-radius: 15px;
+             width: 90%;
+             max-width: 800px;
+             max-height: 90vh;
+             overflow-y: auto;
+             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+         }
+         
+         .modal-header {
+             background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+             color: white;
+             padding: 20px;
+             border-radius: 15px 15px 0 0;
+             display: flex;
+             justify-content: space-between;
+             align-items: center;
+         }
+         
+         .modal-header h3 {
+             margin: 0;
+             font-size: 1.5rem;
+         }
+         
+         .close-btn {
+             background: rgba(255, 255, 255, 0.2);
+             border: 1px solid rgba(255, 255, 255, 0.3);
+             color: white;
+             padding: 8px 16px;
+             border-radius: 6px;
+             cursor: pointer;
+             font-size: 1.5rem;
+             transition: all 0.3s ease;
+         }
+         
+         .close-btn:hover {
+             background: rgba(255, 255, 255, 0.3);
+             transform: translateY(-1px);
+         }
+         
+         .modal-body {
+             padding: 30px;
+         }
+         
+         .product-info-section {
+             margin-bottom: 40px;
+         }
+         
+         .product-info-section h4 {
+             color: #2c3e50;
+             margin-bottom: 20px;
+             font-size: 1.3rem;
+             border-bottom: 2px solid #e9ecef;
+             padding-bottom: 10px;
+         }
+         
+         .info-grid {
+             display: grid;
+             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+             gap: 15px;
+         }
+         
+         .info-item {
+             background: #f8f9fa;
+             padding: 12px;
+             border-radius: 6px;
+             border-left: 3px solid #007bff;
+         }
+         
+         .info-item label {
+             display: block;
+             font-weight: 600;
+             color: #495057;
+             font-size: 0.9rem;
+             margin-bottom: 5px;
+         }
+         
+         .info-item span {
+             color: #2c3e50;
+             font-size: 0.95rem;
+         }
+         
+         .export-history-section {
+             margin-top: 30px;
+         }
+         
+         .export-history-section h4 {
+             color: #2c3e50;
+             margin-bottom: 20px;
+             font-size: 1.3rem;
+             border-bottom: 2px solid #e9ecef;
+             padding-bottom: 10px;
+         }
+         
+         .export-history-item {
+             background: white;
+             border: 1px solid #e9ecef;
+             border-radius: 10px;
+             padding: 20px;
+             margin-bottom: 20px;
+             position: relative;
+             border-left: 5px solid #28a745;
+         }
+         
+         .export-history-item.exported {
+             border-left-color: #007bff;
+         }
+         
+         .export-history-item.current {
+             border-left-color: #ffc107;
+             background: #e3f2fd;
+         }
+         
+         .export-history-header {
+             display: flex;
+             justify-content: space-between;
+             align-items: center;
+             margin-bottom: 15px;
+         }
+         
+         .export-status-badge {
+             padding: 5px 12px;
+             border-radius: 15px;
+           font-size: 0.9rem;
+             font-weight: 600;
+         }
+         
+         .export-status-badge.exported {
+             background: #007bff;
+             color: white;
+         }
+         
+         .export-status-badge.returned {
+             background: #28a745;
+             color: white;
+         }
+         
+         .export-status-badge.current {
+             background: #ffc107;
+             color: #212529;
+         }
+         
+         .export-history-details {
+             display: grid;
+             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+             gap: 15px;
+         }
+         
+         .export-detail-item {
+             background: white;
+             padding: 10px;
+             border-radius: 6px;
+             border: 1px solid #e9ecef;
+         }
+         
+         .export-detail-item label {
+             display: block;
+             font-weight: 600;
+             color: #495057;
+             font-size: 0.9rem;
+             margin-bottom: 5px;
+         }
+         
+         .export-detail-item span {
+             color: #2c3e50;
+             font-size: 0.95rem;
+         }
+         
+         .no-export-history {
+             text-align: center;
+             color: #6c757d;
+             padding: 40px;
+             font-style: italic;
+         }
+         
+         /* Product Detail Section Styles (below table) */
+         .product-detail-section {
+             background: white;
+             border-radius: 15px;
+             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+             margin-top: 30px;
+             overflow: hidden;
+         }
+         
+         .detail-header {
+             background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+             color: white;
+             padding: 20px;
+             display: flex;
+             justify-content: space-between;
+             align-items: center;
+         }
+         
+         .detail-header h3 {
+             margin: 0;
+             font-size: 1.5rem;
+         }
+         
+         .close-detail-btn {
+             background: rgba(255, 255, 255, 0.2);
+             border: 1px solid rgba(255, 255, 255, 0.3);
+             color: white;
+             padding: 8px 16px;
+             border-radius: 6px;
+             cursor: pointer;
+             font-size: 0.9rem;
+             transition: all 0.3s ease;
+         }
+         
+         .close-detail-btn:hover {
+             background: rgba(255, 255, 255, 0.3);
+             transform: translateY(-1px);
+         }
+         
+         .detail-content {
+             padding: 30px;
+         }
+         
+         .detail-content .product-info-section {
+             margin-bottom: 40px;
+         }
+         
+         .detail-content .product-info-section h4 {
+             color: #2c3e50;
+             margin-bottom: 20px;
+             font-size: 1.3rem;
+             border-bottom: 2px solid #e9ecef;
+             padding-bottom: 10px;
+         }
+         
+         .detail-content .info-grid {
+             display: grid;
+             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+             gap: 20px;
+         }
+         
+         .detail-content .info-item {
+             background: #f8f9fa;
+             padding: 15px;
+             border-radius: 8px;
+             border-left: 4px solid #007bff;
+         }
+         
+         .detail-content .info-item label {
+             display: block;
+             font-weight: 600;
+             color: #495057;
+             font-size: 0.9rem;
+             margin-bottom: 8px;
+         }
+         
+         .detail-content .info-item span {
+             color: #2c3e50;
+             font-size: 1rem;
+             font-weight: 500;
+         }
+         
+         .detail-content .export-history-section h4 {
+             color: #2c3e50;
+             margin-bottom: 20px;
+             font-size: 1.3rem;
+             border-bottom: 2px solid #e9ecef;
+             padding-bottom: 10px;
+         }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <button class="back-btn" onclick="goBack()">← 인덱스로 돌아가기</button>
+            <h1> 이화 공구 관리 시스템 </h1>
+            <button class="logout-btn" onclick="logout()">로그아웃</button>
+        </div>
+
+        <div class="main-content">
+            <!-- Navigation Tabs -->
+            <div class="nav-tabs">
+                <button class="nav-tab active" onclick="showTab('product-registration')">제품 등록</button>
+                <button class="nav-tab" onclick="showTab('export-status')">반출 현황</button>
+            </div>
+
+            <!-- Product Registration Tab -->
+            <div id="product-registration" class="tab-content active">
+                <!-- Statistics -->
+                <div class="stats">
+                    <div class="stat-card">
+                        <div class="stat-number" id="totalProducts">0</div>
+                        <div class="stat-label">전체 제품</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="availableProducts">0</div>
+                        <div class="stat-label">사용 가능</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="exportedProducts">0</div>
+                        <div class="stat-label">반출됨</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="maintenanceProducts">0</div>
+                        <div class="stat-label">정비 중</div>
+                    </div>
+                </div>
+
+                <!-- Search Section -->
+                <div class="search-section">
+                    <input type="text" class="search-input" id="searchInput" placeholder="🔍 제품명, 카테고리, 설명으로 검색...">
+                    <button class="btn btn-success" onclick="downloadProductsExcel()" style="margin-left: 15px;">
+                        📊 엑셀 다운로드
+                    </button>
+                </div>
+
+                <!-- Add Product Form -->
+                <div class="form-section">
+                    <h3>➕ 새 제품 추가</h3>
+                    
+                                         <!-- Category Management Section -->
+                     <div class="category-section" style="margin-bottom: 25px; padding: 20px; background: #e8f5e8; border-radius: 8px; border: 2px solid #28a745;">
+                                                   <h4 style="color: #28a745; margin-bottom: 15px;">📁 카테고리 관리</h4>
+                          <div class="form-row">
+                              <div class="form-group" style="flex: 1;">
+                                  <label for="newCategory">새 카테고리 추가</label>
+                                  <input type="text" id="newCategory" placeholder="예: 전동공구, 임팩트, 드릴 등">
+                              </div>
+                              <div class="form-group" style="flex: 0 0 auto; margin-top: 25px;">
+                                  <button type="button" class="btn btn-success" onclick="addNewCategory()">카테고리 추가</button>
+                              </div>
+                          </div>
+                          <div class="category-list" style="margin-top: 15px;">
+                              <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #2c3e50;">현재 카테고리:</label>
+                             <div id="categoryList" style="display: flex; flex-wrap: wrap; gap: 10px;">
+                                 <!-- Categories will be displayed here -->
+                             </div>
+                         </div>
+                     </div>
+                    
+                    <form id="addProductForm">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="productName">제품명 *</label>
+                                <input type="text" id="productName" required placeholder="예: 18V 임팩트 드릴">
+                            </div>
+                            <div class="form-group">
+                                <label for="productMaker">메이커 *</label>
+                                <input type="text" id="productMaker" required placeholder="예: 보쉬, 스탠리, 마키타">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="productModel">모델명 *</label>
+                                <input type="text" id="productModel" required placeholder="예: GBH 2-26, AntiVibe">
+                            </div>
+                            <div class="form-group">
+                                <label for="productSpecification">규격</label>
+                                <input type="text" id="productSpecification" placeholder="예: 26mm, 800W, 1kg">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="productCategory">카테고리 *</label>
+                                <select id="productCategory" required>
+                                    <option value="">카테고리 선택</option>
+                                    <!-- Categories will be dynamically loaded here -->
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="productStatus">상태 *</label>
+                                <select id="productStatus" required>
+                                    <option value="">상태 선택</option>
+                                    <option value="Available">사용 가능</option>
+                                    <option value="Exported">반출됨</option>
+                                    <option value="Under Maintenance">정비 중</option>
+                                    <option value="Retired">폐기됨</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="productSerial">시리얼 번호 (선택사항)</label>
+                                <input type="text" id="productSerial" placeholder="제품 시리얼 번호 (선택사항)">
+                            </div>
+                            <div class="form-group">
+                                <label for="productPurchaseDate">구매일 (선택사항)</label>
+                                <input type="date" id="productPurchaseDate">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="productDescription">설명 (선택사항)</label>
+                            <textarea id="productDescription" rows="3" placeholder="제품 설명 및 사양 (선택사항)"></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">제품 추가</button>
+                        <button type="button" class="btn btn-secondary" onclick="resetForm()">양식 초기화</button>
+                    </form>
+                </div>
+
+                <!-- Products List -->
+                <div id="productsContainer">
+                    <!-- Products will be dynamically added here -->
+                </div>
+            </div>
+
+            <!-- Export Status Tab -->
+            <div id="export-status" class="tab-content">
+                <div class="stats">
+                    <div class="stat-card" style="background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);">
+                        <div class="stat-number" id="totalExported">0</div>
+                        <div class="stat-label">전체 반출</div>
+                    </div>
+                    <div class="stat-card" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
+                        <div class="stat-number" id="availableForReturn">0</div>
+                        <div class="stat-label">반납 가능</div>
+                    </div>
+                    <div class="stat-card" style="background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);">
+                        <div class="stat-number" id="overdueExports">0</div>
+                        <div class="stat-label">연체 (>7일)</div>
+                    </div>
+                    <div class="stat-card" style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);">
+                        <div class="stat-number" id="longTermExports">0</div>
+                        <div class="stat-label">장기 (>30일)</div>
+                    </div>
+                </div>
+                <div class="form-section export-status">
+                    <h3>📤 반출 현황 관리</h3>
+                    <p>시스템의 모든 제품 반출 현황을 추적하고 관리합니다.</p>
+                </div>
+                <div class="search-section">
+                    <div class="search-row">
+                        <input type="text" class="search-input" id="exportSearchInput" placeholder="🔍 제품명, 사용자, 목적으로 검색...">
+                        <select id="exportStatusFilter" class="status-filter" onchange="filterExportStatusByStatus()">
+                            <option value="">전체 상태</option>
+                            <option value="Available">사용 가능</option>
+                            <option value="Exported">현재 반출됨</option>
+                            <option value="Under Maintenance">정비 중</option>
+                            <option value="Retired">폐기됨</option>
+                        </select>
+                        <select id="exportCategoryFilter" class="status-filter" onchange="filterExportStatusByCategory()">
+                            <option value="">전체 카테고리</option>
+                            <!-- Categories will be dynamically loaded here -->
+                        </select>
+                        <button class="btn btn-success" onclick="downloadExportStatusExcel()">
+                            📊 엑셀 다운로드
+                        </button>
+                    </div>
+                </div>
+                                 <div id="exportStatusContainer">
+                     <!-- Export status will be displayed here as a list -->
+                 </div>
+                 
+                 <!-- Product Detail Section (below the table) -->
+                 <div id="productDetailSection" class="product-detail-section" style="display: none;">
+                     <div class="detail-header">
+                         <h3 id="detailProductName">제품 상세 정보</h3>
+                         <button class="close-detail-btn" onclick="closeProductDetail()">닫기</button>
+                     </div>
+                     
+                     <div class="detail-content">
+                         <div class="product-info-section">
+                             <h4>📋 제품 기본 정보</h4>
+                             <div class="info-grid">
+                                 <div class="info-item">
+                                     <label>메이커:</label>
+                                     <span id="detailMaker">-</span>
+                                 </div>
+                                 <div class="info-item">
+                                     <label>모델명:</label>
+                                     <span id="detailModel">-</span>
+                                 </div>
+                                 <div class="info-item">
+                                     <label>규격:</label>
+                                     <span id="detailSpecification">-</span>
+                                 </div>
+                                 <div class="info-item">
+                                     <label>카테고리:</label>
+                                     <span id="detailCategory">-</span>
+                                 </div>
+                                 <div class="info-item">
+                                     <label>시리얼 번호:</label>
+                                     <span id="detailSerialNumber">-</span>
+                                 </div>
+                                 <div class="info-item">
+                                     <label>구매일:</label>
+                                     <span id="detailPurchaseDate">-</span>
+                                 </div>
+                                 <div class="info-item">
+                                     <label>등록일:</label>
+                                     <span id="detailRegistrationDate">-</span>
+                                 </div>
+                                 <div class="info-item">
+                                     <label>현재 상태:</label>
+                                     <span id="detailCurrentStatus">-</span>
+                                 </div>
+                             </div>
+                         </div>
+                         
+                         <div class="export-history-section">
+                             <h4>📤 반출 이력</h4>
+                             <div id="exportHistoryContainer">
+                                 <!-- Export history will be displayed here -->
+                             </div>
+                         </div>
+                     </div>
+                 </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showTab(tabName) {
+            // Hide all tab contents
+            const tabContents = document.querySelectorAll('.tab-content');
+            tabContents.forEach(tab => tab.classList.remove('active'));
+            
+            // Remove active class from all tabs
+            const navTabs = document.querySelectorAll('.nav-tab');
+            navTabs.forEach(tab => tab.classList.remove('active'));
+            
+            // Show selected tab content
+            document.getElementById(tabName).classList.add('active');
+            
+            // Add active class to clicked tab
+            event.target.classList.add('active');
+        }
+        
+        function goBack() {
+            window.location.href = 'index.html';
+        }
+
+        function logout() {
+            if (confirm('로그아웃하시겠습니까?')) {
+                // 로그인 페이지로 이동
+                window.location.href = 'LOGIN.HTML';
+            }
+        }
+        
+        function resetForm() {
+            document.getElementById('addProductForm').reset();
+        }
+        
+        function addNewCategory() {
+            if (window.desktopSystem) {
+                window.desktopSystem.addNewCategory();
+            }
+        }
+        
+        function filterExportStatusByStatus() {
+            if (window.desktopSystem) {
+                window.desktopSystem.filterExportStatusByStatus();
+            }
+        }
+        
+                 function filterExportStatusByCategory() {
+             if (window.desktopSystem) {
+                 window.desktopSystem.filterExportStatusByCategory();
+             }
+         }
+         
+         function showProductDetail(productId) {
+             if (window.desktopSystem) {
+                 window.desktopSystem.showProductDetail(productId);
+             }
+         }
+         
+         function closeProductDetail() {
+             document.getElementById('productDetailModal').style.display = 'none';
+         }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase.js"></script>
+    <script src="desktop.js"></script>
+</body>
+</html>
