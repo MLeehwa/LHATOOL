@@ -101,6 +101,9 @@ class PDAToolManagement {
         // Hide mode selection
         document.getElementById('modeSelection').style.display = 'none';
         
+        // Reset all input fields to ensure clean state
+        this.resetInputFields();
+        
         if (mode === 'export') {
             // Show user name modal first for export
             this.showExportUserNameModal();
@@ -110,13 +113,36 @@ class PDAToolManagement {
             // Focus on scan input and force keyboard to open
             setTimeout(() => {
                 const scanInput = document.getElementById('returnScanInput');
-                scanInput.focus();
-                // Force keyboard to open on tablet
-                scanInput.click();
-                // Set input mode for better tablet keyboard
-                scanInput.setAttribute('inputmode', 'text');
+                if (scanInput) {
+                    scanInput.focus();
+                    // Force keyboard to open on tablet
+                    scanInput.click();
+                    // Set input mode for better tablet keyboard
+                    scanInput.setAttribute('inputmode', 'text');
+                }
             }, 200);
         }
+    }
+
+    // Reset all input fields to ensure clean state
+    resetInputFields() {
+        const inputs = [
+            'exportScanInput',
+            'returnScanInput',
+            'exportUserName'
+        ];
+        
+        inputs.forEach(id => {
+            const input = document.getElementById(id);
+            if (input) {
+                input.value = '';
+                input.blur();
+                input.setAttribute('inputmode', 'text');
+                input.setAttribute('autocapitalize', 'none');
+                input.setAttribute('autocorrect', 'off');
+                input.setAttribute('spellcheck', 'false');
+            }
+        });
     }
 
     // Go back to mode selection
@@ -136,24 +162,44 @@ class PDAToolManagement {
         // Show mode selection
         document.getElementById('modeSelection').style.display = 'block';
         
-        // Clear inputs
-        document.getElementById('exportScanInput').value = '';
-        document.getElementById('returnScanInput').value = '';
-        
-        // Reset input attributes for better tablet keyboard support
+        // Clear inputs and reset their state
         const exportInput = document.getElementById('exportScanInput');
         const returnInput = document.getElementById('returnScanInput');
+        const userNameInput = document.getElementById('exportUserName');
         
-        exportInput.setAttribute('inputmode', 'text');
-        returnInput.setAttribute('inputmode', 'text');
+        if (exportInput) {
+            exportInput.value = '';
+            exportInput.blur(); // Remove focus
+            exportInput.setAttribute('inputmode', 'text');
+        }
         
-        // Force focus on mode selection for better UX
+        if (returnInput) {
+            returnInput.value = '';
+            returnInput.blur(); // Remove focus
+            returnInput.setAttribute('inputmode', 'text');
+        }
+        
+        if (userNameInput) {
+            userNameInput.value = '';
+            userNameInput.blur(); // Remove focus
+            userNameInput.setAttribute('inputmode', 'text');
+        }
+        
+        // Force keyboard to close by focusing on a non-input element
         setTimeout(() => {
             const modeSelection = document.getElementById('modeSelection');
             if (modeSelection) {
                 modeSelection.focus();
+                // Ensure mode selection is properly visible and focused
+                modeSelection.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
         }, 100);
+        
+        // Additional cleanup to ensure clean state
+        setTimeout(() => {
+            // Re-setup input attributes to ensure they're ready for next use
+            this.setupInputAttributes();
+        }, 200);
     }
 
     // Show export user name modal (first step)
@@ -179,14 +225,21 @@ class PDAToolManagement {
         // Show export scan section
         document.getElementById('exportScanSection').classList.add('active');
         
-        // Focus on scan input and force keyboard to open
+        // Reset and focus on scan input and force keyboard to open
         setTimeout(() => {
             const scanInput = document.getElementById('exportScanInput');
-            scanInput.focus();
-            // Force keyboard to open on tablet
-            scanInput.click();
-            // Set input mode for better tablet keyboard
-            scanInput.setAttribute('inputmode', 'text');
+            if (scanInput) {
+                // Ensure clean state
+                scanInput.value = '';
+                scanInput.setAttribute('inputmode', 'text');
+                scanInput.setAttribute('autocapitalize', 'none');
+                scanInput.setAttribute('autocorrect', 'off');
+                scanInput.setAttribute('spellcheck', 'false');
+                
+                // Force focus and keyboard to open
+                scanInput.focus();
+                scanInput.click();
+            }
         }, 200);
     }
 
