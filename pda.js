@@ -18,11 +18,33 @@ class PDAToolManagement {
             }
             
             this.setupEventListeners();
+            this.setupInputAttributes();
             console.log('PDA 시스템 초기화 완료');
         } catch (error) {
             console.error('PDA 시스템 초기화 실패:', error);
             this.showNotification('시스템 초기화에 실패했습니다.', 'error');
         }
+    }
+
+    // Setup input attributes for better tablet keyboard support
+    setupInputAttributes() {
+        // Set inputmode for all text inputs to ensure tablet keyboard opens
+        const textInputs = [
+            'exportScanInput',
+            'returnScanInput', 
+            'exportUserName'
+        ];
+        
+        textInputs.forEach(id => {
+            const input = document.getElementById(id);
+            if (input) {
+                input.setAttribute('inputmode', 'text');
+                // Additional attributes for better mobile/tablet experience
+                input.setAttribute('autocapitalize', 'none');
+                input.setAttribute('autocorrect', 'off');
+                input.setAttribute('spellcheck', 'false');
+            }
+        });
     }
 
     // Event listeners setup
@@ -51,6 +73,25 @@ class PDAToolManagement {
                 this.confirmExportUserName();
             }
         });
+
+        // Force keyboard to open on input click for tablet devices
+        [exportScanInput, returnScanInput, exportUserName].forEach(input => {
+            if (input) {
+                input.addEventListener('click', () => {
+                    // Force focus and keyboard to open
+                    input.focus();
+                    // Small delay to ensure focus is set
+                    setTimeout(() => {
+                        input.click();
+                    }, 50);
+                });
+                
+                input.addEventListener('focus', () => {
+                    // Ensure inputmode is set when focused
+                    input.setAttribute('inputmode', 'text');
+                });
+            }
+        });
     }
 
     // Select mode (export or return)
@@ -66,10 +107,15 @@ class PDAToolManagement {
         } else if (mode === 'return') {
             // Show return scan section directly
             document.getElementById('returnScanSection').classList.add('active');
-            // Focus on scan input
+            // Focus on scan input and force keyboard to open
             setTimeout(() => {
-                document.getElementById('returnScanInput').focus();
-            }, 100);
+                const scanInput = document.getElementById('returnScanInput');
+                scanInput.focus();
+                // Force keyboard to open on tablet
+                scanInput.click();
+                // Set input mode for better tablet keyboard
+                scanInput.setAttribute('inputmode', 'text');
+            }, 200);
         }
     }
 
@@ -93,6 +139,21 @@ class PDAToolManagement {
         // Clear inputs
         document.getElementById('exportScanInput').value = '';
         document.getElementById('returnScanInput').value = '';
+        
+        // Reset input attributes for better tablet keyboard support
+        const exportInput = document.getElementById('exportScanInput');
+        const returnInput = document.getElementById('returnScanInput');
+        
+        exportInput.setAttribute('inputmode', 'text');
+        returnInput.setAttribute('inputmode', 'text');
+        
+        // Force focus on mode selection for better UX
+        setTimeout(() => {
+            const modeSelection = document.getElementById('modeSelection');
+            if (modeSelection) {
+                modeSelection.focus();
+            }
+        }, 100);
     }
 
     // Show export user name modal (first step)
@@ -118,10 +179,15 @@ class PDAToolManagement {
         // Show export scan section
         document.getElementById('exportScanSection').classList.add('active');
         
-        // Focus on scan input
+        // Focus on scan input and force keyboard to open
         setTimeout(() => {
-            document.getElementById('exportScanInput').focus();
-        }, 100);
+            const scanInput = document.getElementById('exportScanInput');
+            scanInput.focus();
+            // Force keyboard to open on tablet
+            scanInput.click();
+            // Set input mode for better tablet keyboard
+            scanInput.setAttribute('inputmode', 'text');
+        }, 200);
     }
 
     // Scan for export

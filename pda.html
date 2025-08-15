@@ -406,7 +406,7 @@
                     </button>
                     <h3>📤 공구 반출</h3>
                 </div>
-                <input type="text" class="scan-input" id="exportScanInput" placeholder="바코드를 스캔하거나 제품 ID를 입력하세요" autocomplete="off">
+                <input type="text" class="scan-input" id="exportScanInput" placeholder="바코드를 스캔하거나 제품 ID를 입력하세요" autocomplete="off" inputmode="text">
                 <button class="scan-btn export" onclick="scanForExport()">스캔 및 반출</button>
                 
                 <!-- 제품 상세 정보 표시 -->
@@ -445,7 +445,7 @@
                     </button>
                     <h3>📥 공구 반납</h3>
                 </div>
-                <input type="text" class="scan-input" id="returnScanInput" placeholder="바코드를 스캔하거나 제품 ID를 입력하세요" autocomplete="off">
+                <input type="text" class="scan-input" id="returnScanInput" placeholder="바코드를 스캔하거나 제품 ID를 입력하세요" autocomplete="off" inputmode="text">
                 <button class="scan-btn return" onclick="scanForReturn()">스캔 및 반납</button>
                 
                 <!-- 제품 상세 정보 표시 -->
@@ -491,7 +491,7 @@
         <div class="modal-content">
             <h3>📤 공구 반출</h3>
             <p style="margin-bottom: 20px; color: #6c757d;">반출자 이름을 입력해주세요</p>
-            <input type="text" class="modal-input" id="exportUserName" placeholder="이름을 입력하세요" maxlength="20">
+            <input type="text" class="modal-input" id="exportUserName" placeholder="이름을 입력하세요" maxlength="20" inputmode="text">
             <div class="modal-buttons">
                 <button class="modal-btn primary" onclick="confirmExportUserName()">확인</button>
                 <button class="modal-btn secondary" onclick="closeModal('exportUserNameModal')">취소</button>
