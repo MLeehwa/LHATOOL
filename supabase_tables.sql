@@ -3,10 +3,14 @@ DROP TABLE IF EXISTS tools_export_history;
 DROP TABLE IF EXISTS tools_products;
 DROP TABLE IF EXISTS tools_categories;
 
+-- 기존 테이블에 code 컬럼 추가 (기존 데이터가 있는 경우)
+-- ALTER TABLE tools_categories ADD COLUMN IF NOT EXISTS code VARCHAR(10) UNIQUE;
+
 -- 1. tools_categories 테이블 (카테고리)
 CREATE TABLE tools_categories (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100) UNIQUE NOT NULL,
+    code VARCHAR(10) UNIQUE,                       -- 카테고리 코드 (A, B, C, D, E...)
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -22,6 +26,8 @@ CREATE TABLE tools_products (
     description TEXT,                              -- 추가 설명
     serial_number VARCHAR(100),                    -- 시리얼 번호
     purchase_date DATE,                            -- 구매일
+    warranty_date DATE,                            -- 워런티 만료일 (선택사항)
+    asset_code VARCHAR(50),                        -- 자산코드 (카테고리별 관리코드)
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     last_modified TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     exported_by VARCHAR(100),                      -- 반출자
@@ -44,12 +50,12 @@ CREATE TABLE tools_export_history (
 );
 
 -- 기본 카테고리 데이터
-INSERT INTO tools_categories (name) VALUES 
-    ('전동공구'),
-    ('수동공구'),
-    ('측정도구'),
-    ('안전장비'),
-    ('기타');
+INSERT INTO tools_categories (name, code) VALUES 
+    ('전동공구', 'A'),
+    ('수동공구', 'B'),
+    ('측정도구', 'C'),
+    ('안전장비', 'D'),
+    ('기타', 'E');
 
 -- 기본 제품 데이터 (메이커, 모델, 규격 포함)
 INSERT INTO tools_products (name, maker, model, specification, category, status, description, serial_number, purchase_date, barcode, item_number) VALUES 

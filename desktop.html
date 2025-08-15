@@ -1,10 +1,15 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LEEHWA AMERICA - 공구 관리 시스템</title>
+    
+    <!-- SheetJS 라이브러리 추가 (한글 깨짐 방지) -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+    
     <style>
         * {
             margin: 0;
@@ -296,33 +301,59 @@
             width: 100%;
             border-collapse: collapse;
             background: white;
-            border-radius: 10px;
+            border-radius: 15px;
             overflow: hidden;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
             margin-bottom: 30px;
+            border: 2px solid #e9ecef;
         }
 
         .products-table th {
             background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
             color: white;
-            padding: 15px 12px;
+            padding: 18px 15px;
             text-align: left;
-            font-weight: 600;
-            font-size: 0.95rem;
+            font-weight: 700;
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 3px solid #1e7e34;
+            position: sticky;
+            top: 0;
+            z-index: 10;
         }
 
         .products-table td {
-            padding: 12px;
+            padding: 16px 15px;
             border-bottom: 1px solid #e9ecef;
-            vertical-align: top;
+            vertical-align: middle;
+            font-size: 0.95rem;
+            line-height: 1.4;
+            transition: all 0.3s ease;
+        }
+
+        .products-table tr {
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
         }
 
         .products-table tr:hover {
-            background-color: #f8f9fa;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border-left-color: #28a745;
         }
 
         .products-table tr:last-child td {
             border-bottom: none;
+        }
+
+        .products-table tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+
+        .products-table tr:nth-child(even):hover {
+            background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%);
         }
 
         .tool-actions {
@@ -470,7 +501,7 @@
         /* Export Status Table Styles - 더 넓게 */
         .export-status-table {
             width: 100%;
-            min-width: 1600px; /* 더 넓은 테이블 */
+            min-width: 1800px; /* 더 넓은 테이블로 조정 */
             font-size: 0.9rem;
             table-layout: fixed; /* 테이블 레이아웃 고정 */
         }
@@ -607,12 +638,31 @@
             }
             
             .products-table {
-                font-size: 0.9rem;
+                font-size: 0.85rem;
+                min-width: 1200px; /* 모바일에서도 최소 너비 보장 */
             }
             
             .products-table th,
             .products-table td {
-                padding: 8px 6px;
+                padding: 12px 8px;
+            }
+            
+            .status-badge {
+                padding: 4px 8px;
+                font-size: 0.75rem;
+                min-width: 60px;
+            }
+            
+            .asset-code {
+                padding: 3px 6px;
+                font-size: 0.7rem;
+                min-width: 50px;
+            }
+            
+            .warranty-date {
+                padding: 3px 6px;
+                font-size: 0.7rem;
+                min-width: 70px;
             }
             
             .tool-actions {
@@ -889,12 +939,35 @@
              font-size: 0.95rem;
          }
          
-         .no-export-history {
-             text-align: center;
-             color: #6c757d;
-             padding: 40px;
-             font-style: italic;
-         }
+         .loading-history {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+            font-style: italic;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 2px dashed #dee2e6;
+        }
+
+        .loading-history::before {
+            content: "⏳ ";
+            font-size: 1.2em;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .no-export-history {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+        }
          
          /* Product Detail Section Styles (below table) */
          .product-detail-section {
@@ -985,6 +1058,79 @@
              border-bottom: 2px solid #e9ecef;
              padding-bottom: 10px;
          }
+        .status-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: inline-block;
+            min-width: 80px;
+            text-align: center;
+        }
+
+        .status-available {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+        }
+
+        .status-exported {
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            color: white;
+            box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
+        }
+
+        .status-maintenance {
+            background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+            color: #212529;
+            box-shadow: 0 2px 8px rgba(255, 193, 7, 0.3);
+        }
+
+        .status-retired {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            color: white;
+            box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
+        }
+
+        .asset-code {
+            background: linear-gradient(135deg, #6f42c1 0%, #5a32a3 100%);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            font-family: 'Courier New', monospace;
+            display: inline-block;
+            min-width: 60px;
+            text-align: center;
+            box-shadow: 0 2px 6px rgba(111, 66, 193, 0.3);
+        }
+
+        .warranty-date {
+            background: linear-gradient(135deg, #fd7e14 0%, #e55a00 100%);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            display: inline-block;
+            min-width: 80px;
+            text-align: center;
+            box-shadow: 0 2px 6px rgba(253, 126, 20, 0.3);
+        }
+
+        .warranty-expired {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
     </style>
 </head>
 <body>
@@ -1106,9 +1252,15 @@
                                 <input type="date" id="productPurchaseDate">
                             </div>
                         </div>
-                        <div class="form-group">
-                            <label for="productDescription">설명 (선택사항)</label>
-                            <textarea id="productDescription" rows="3" placeholder="제품 설명 및 사양 (선택사항)"></textarea>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="productWarrantyDate">워런티 만료일 (선택사항)</label>
+                                <input type="date" id="productWarrantyDate" placeholder="워런티 만료일">
+                            </div>
+                            <div class="form-group">
+                                <label for="productDescription">설명 (선택사항)</label>
+                                <textarea id="productDescription" rows="3" placeholder="제품 설명 및 사양 (선택사항)"></textarea>
+                            </div>
                         </div>
                         <button type="submit" class="btn btn-primary">제품 추가</button>
                         <button type="button" class="btn btn-secondary" onclick="resetForm()">양식 초기화</button>
@@ -1196,12 +1348,20 @@
                                      <span id="detailCategory">-</span>
                                  </div>
                                  <div class="info-item">
+                                     <label>자산코드:</label>
+                                     <span id="detailAssetCode">-</span>
+                                 </div>
+                                 <div class="info-item">
                                      <label>시리얼 번호:</label>
                                      <span id="detailSerialNumber">-</span>
                                  </div>
                                  <div class="info-item">
                                      <label>구매일:</label>
                                      <span id="detailPurchaseDate">-</span>
+                                 </div>
+                                 <div class="info-item">
+                                     <label>워런티:</label>
+                                     <span id="detailWarrantyDate">-</span>
                                  </div>
                                  <div class="info-item">
                                      <label>등록일:</label>

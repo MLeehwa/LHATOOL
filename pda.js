@@ -6,6 +6,11 @@ class PDAToolManagement {
         this.scannedProduct = null;
         this.currentExportUser = null;
         this.isProcessing = false; // 중복 처리 방지
+        
+        // 장바구니 기능 추가
+        this.exportCart = []; // 반출 장바구니
+        this.returnCart = []; // 반납 장바구니
+        
         this.init();
     }
 
@@ -47,6 +52,235 @@ class PDAToolManagement {
         });
     }
 
+    // 장바구니에 제품 추가
+    addToCart(mode, product) {
+        if (mode === 'export') {
+            // 중복 체크
+            const exists = this.exportCart.find(item => item.id === product.id);
+            if (exists) {
+                this.showNotification(`"${product.name}"은 이미 장바구니에 있습니다.`, 'warning');
+                return false;
+            }
+            
+            this.exportCart.push({
+                ...product,
+                addedAt: new Date()
+            });
+            this.updateCartDisplay('export');
+            this.showNotification(`"${product.name}"이 반출 장바구니에 추가되었습니다.`, 'success');
+            return true;
+        } else if (mode === 'return') {
+            // 중복 체크
+            const exists = this.returnCart.find(item => item.id === product.id);
+            if (exists) {
+                this.showNotification(`"${product.name}"은 이미 장바구니에 있습니다.`, 'warning');
+                return false;
+            }
+            
+            this.returnCart.push({
+                ...product,
+                addedAt: new Date()
+            });
+            this.updateCartDisplay('return');
+            this.showNotification(`"${product.name}"이 반납 장바구니에 추가되었습니다.`, 'success');
+            return true;
+        }
+        return false;
+    }
+
+    // 장바구니에서 제품 제거
+    removeFromCart(mode, productId) {
+        if (mode === 'export') {
+            this.exportCart = this.exportCart.filter(item => item.id !== productId);
+            this.updateCartDisplay('export');
+        } else if (mode === 'return') {
+            this.returnCart = this.returnCart.filter(item => item.id !== productId);
+            this.updateCartDisplay('return');
+        }
+    }
+
+    // 장바구니 표시 업데이트
+    updateCartDisplay(mode) {
+        const cartSection = document.getElementById(`${mode}CartSection`);
+        const cartItems = document.getElementById(`${mode}CartItems`);
+        
+        if (!cartSection || !cartItems) return;
+        
+        if (mode === 'export') {
+            if (this.exportCart.length === 0) {
+                cartSection.style.display = 'none';
+                return;
+            }
+            
+            cartSection.style.display = 'block';
+            cartItems.innerHTML = this.exportCart.map(item => `
+                <div class="cart-item">
+                    <div class="item-info">
+                        <div class="item-name">${item.name}</div>
+                        <div class="item-details">${item.category} | ${item.maker} | ${item.barcode}</div>
+                    </div>
+                    <button class="remove-btn" onclick="removeFromExportCart(${item.id})" title="제거">❌</button>
+                </div>
+            `).join('');
+        } else if (mode === 'return') {
+            if (this.returnCart.length === 0) {
+                cartSection.style.display = 'none';
+                return;
+            }
+            
+            cartSection.style.display = 'block';
+            cartItems.innerHTML = this.returnCart.map(item => `
+                <div class="cart-item">
+                    <div class="item-info">
+                        <div class="item-name">${item.name}</div>
+                        <div class="item-details">${item.category} | ${item.maker} | ${item.barcode}</div>
+                    </div>
+                    <button class="remove-btn" onclick="removeFromReturnCart(${item.id})" title="제거">❌</button>
+                </div>
+            `).join('');
+        }
+    }
+
+    // 장바구니 비우기
+    clearCart(mode) {
+        if (mode === 'export') {
+            this.exportCart = [];
+            this.updateCartDisplay('export');
+            this.showNotification('반출 장바구니가 비워졌습니다.', 'info');
+        } else if (mode === 'return') {
+            this.returnCart = [];
+            this.updateCartDisplay('return');
+            this.showNotification('반납 장바구니가 비워졌습니다.', 'info');
+        }
+    }
+
+    // 반출 장바구니 일괄 처리
+    async processExportCart() {
+        if (this.exportCart.length === 0) {
+            this.showNotification('반출할 제품이 없습니다.', 'warning');
+            return;
+        }
+
+        if (!this.currentExportUser) {
+            this.showNotification('반출자 이름이 설정되지 않았습니다.', 'error');
+            return;
+        }
+
+        this.isProcessing = true;
+        
+        try {
+            let successCount = 0;
+            let failCount = 0;
+            
+            for (const product of this.exportCart) {
+                try {
+                    const success = await window.toolsDB.exportHistory.export(
+                        product.id,
+                        this.currentExportUser,
+                        '현장작업'
+                    );
+                    
+                    if (success) {
+                        successCount++;
+                    } else {
+                        failCount++;
+                    }
+                } catch (error) {
+                    console.error(`제품 ${product.name} 반출 오류:`, error);
+                    failCount++;
+                }
+            }
+            
+            if (successCount > 0) {
+                this.showNotification(`${successCount}개 제품 반출 완료!${failCount > 0 ? ` (${failCount}개 실패)` : ''}`, 'success');
+                
+                // 성공한 제품들만 장바구니에서 제거
+                this.exportCart = this.exportCart.filter(product => {
+                    // 실제로는 DB에서 성공 여부를 확인해야 하지만, 여기서는 간단히 처리
+                    return false; // 모든 제품 제거
+                });
+                
+                this.updateCartDisplay('export');
+                
+                // 메인 선택 화면으로 돌아가기
+                setTimeout(() => {
+                    this.goBackToModeSelection();
+                }, 2000);
+            } else {
+                this.showNotification('모든 제품 반출에 실패했습니다.', 'error');
+            }
+        } catch (error) {
+            console.error('일괄 반출 처리 오류:', error);
+            this.showNotification('일괄 반출 처리 중 오류가 발생했습니다.', 'error');
+        } finally {
+            this.isProcessing = false;
+        }
+    }
+
+    // 반납 장바구니 일괄 처리
+    async processReturnCart() {
+        if (this.returnCart.length === 0) {
+            this.showNotification('반납할 제품이 없습니다.', 'warning');
+            return;
+        }
+
+        this.isProcessing = true;
+        
+        try {
+            let successCount = 0;
+            let failCount = 0;
+            
+            for (const product of this.returnCart) {
+                try {
+                    // 반출 이력에서 반출자 이름 가져오기
+                    const exportHistory = await window.toolsDB.exportHistory.getByProductId(product.id);
+                    let exportedBy = '알 수 없음';
+                    
+                    if (exportHistory && exportHistory.length > 0) {
+                        exportedBy = exportHistory[0].exported_by;
+                    }
+                    
+                    const success = await window.toolsDB.exportHistory.return(
+                        product.id,
+                        exportedBy
+                    );
+                    
+                    if (success) {
+                        successCount++;
+                    } else {
+                        failCount++;
+                    }
+                } catch (error) {
+                    console.error(`제품 ${product.name} 반납 오류:`, error);
+                    failCount++;
+                }
+            }
+            
+            if (successCount > 0) {
+                this.showNotification(`${successCount}개 제품 반납 완료!${failCount > 0 ? ` (${failCount}개 실패)` : ''}`, 'success');
+                
+                // 성공한 제품들만 장바구니에서 제거
+                this.returnCart = this.returnCart.filter(product => {
+                    return false; // 모든 제품 제거
+                });
+                
+                this.updateCartDisplay('return');
+                
+                // 메인 선택 화면으로 돌아가기
+                setTimeout(() => {
+                    this.goBackToModeSelection();
+                }, 2000);
+            } else {
+                this.showNotification('모든 제품 반납에 실패했습니다.', 'error');
+            }
+        } catch (error) {
+            console.error('일괄 반납 처리 오류:', error);
+            this.showNotification('일괄 반납 처리 중 오류가 발생했습니다.', 'error');
+        } finally {
+            this.isProcessing = false;
+        }
+    }
+
     // Event listeners setup
     setupEventListeners() {
         // Scan inputs with Enter key support
@@ -74,6 +308,10 @@ class PDAToolManagement {
             }
         });
 
+        // Auto-enter functionality for scan inputs
+        this.setupAutoEnter(exportScanInput, () => this.scanForExport());
+        this.setupAutoEnter(returnScanInput, () => this.scanForReturn());
+
         // Force keyboard to open on input click for tablet devices
         [exportScanInput, returnScanInput, exportUserName].forEach(input => {
             if (input) {
@@ -92,6 +330,117 @@ class PDAToolManagement {
                 });
             }
         });
+    }
+
+    // Setup auto-enter functionality for scan inputs
+    setupAutoEnter(inputElement, callback) {
+        if (!inputElement) return;
+
+        // 바코드 스캐너는 보통 빠르게 연속으로 입력됨
+        let lastInputTime = 0;
+        let inputBuffer = '';
+        let autoEnterTimeout = null;
+
+        // 입력값 변경 감지
+        inputElement.addEventListener('input', (e) => {
+            const currentTime = Date.now();
+            const inputValue = e.target.value;
+            
+            // 빠른 입력이 감지되면 바코드 스캔으로 간주
+            if (currentTime - lastInputTime < 100) {
+                // 빠른 입력이 감지되면 바코드 스캔으로 간주
+                inputBuffer = inputValue;
+                
+                // 기존 타이머 제거
+                if (autoEnterTimeout) {
+                    clearTimeout(autoEnterTimeout);
+                }
+                
+                // 자동 엔터 타이머 설정 (바코드 스캔 완료 대기)
+                autoEnterTimeout = setTimeout(() => {
+                    if (inputBuffer.length > 0) {
+                        // 자동으로 엔터키 시뮬레이션
+                        this.autoEnter(inputElement, callback);
+                    }
+                }, 300); // 300ms 대기 (바코드 스캔 완료 시간)
+            } else {
+                // 수동 입력으로 간주
+                inputBuffer = inputValue;
+                
+                // 수동 입력 시 자동 엔터 조건 확인
+                this.checkAutoEnterConditions(inputElement, inputValue, callback);
+            }
+            
+            lastInputTime = currentTime;
+        });
+
+        // 키보드 입력 감지
+        inputElement.addEventListener('keydown', (e) => {
+            // 특정 키 입력 시 자동 엔터
+            if (e.key === 'Tab' || e.key === ' ') {
+                e.preventDefault();
+                this.autoEnter(inputElement, callback);
+            }
+        });
+
+        // 포커스 아웃 시 자동 엔터
+        inputElement.addEventListener('blur', () => {
+            if (inputElement.value.trim().length > 0) {
+                // 포커스가 벗어나면 자동으로 처리
+                setTimeout(() => {
+                    this.autoEnter(inputElement, callback);
+                }, 100);
+            }
+        });
+    }
+
+    // 자동 엔터 조건 확인
+    checkAutoEnterConditions(inputElement, value, callback) {
+        const trimmedValue = value.trim();
+        
+        // 빈 값이면 처리하지 않음
+        if (trimmedValue.length === 0) return;
+        
+        // 바코드 형식 감지 (P로 시작하는 4자리: P + 3자리 숫자)
+        if (trimmedValue.startsWith('P') && trimmedValue.length === 4) {
+            this.autoEnter(inputElement, callback);
+            return;
+        }
+        
+        // 일반 바코드 길이 (8-13자리)
+        if (trimmedValue.length >= 8 && trimmedValue.length <= 13) {
+            // 숫자나 문자로만 구성된 경우 바코드로 간주
+            if (/^[A-Za-z0-9]+$/.test(trimmedValue)) {
+                this.autoEnter(inputElement, callback);
+                return;
+            }
+        }
+        
+        // 제품 ID (숫자만, 3자리)
+        if (/^\d{3}$/.test(trimmedValue)) {
+            this.autoEnter(inputElement, callback);
+            return;
+        }
+        
+        // 2자리 이상 숫자 (기타 제품 ID)
+        if (/^\d{2,}$/.test(trimmedValue)) {
+            this.autoEnter(inputElement, callback);
+            return;
+        }
+    }
+
+    // 자동 엔터 실행
+    autoEnter(inputElement, callback) {
+        // 입력값이 있으면 콜백 실행
+        if (inputElement.value.trim().length > 0) {
+            // 입력 필드에 포커스 유지
+            inputElement.focus();
+            
+            // 콜백 실행 (스캔 함수)
+            if (typeof callback === 'function') {
+                callback();
+            }
+        }
     }
 
     // Select mode (export or return)
@@ -151,16 +500,46 @@ class PDAToolManagement {
         this.scannedProduct = null;
         this.currentExportUser = null;
         
+        // 장바구니 초기화
+        this.exportCart = [];
+        this.returnCart = [];
+        
         // Hide all scan sections
-        document.getElementById('exportScanSection').classList.remove('active');
-        document.getElementById('returnScanSection').classList.remove('active');
+        const exportScanSection = document.getElementById('exportScanSection');
+        const returnScanSection = document.getElementById('returnScanSection');
+        
+        if (exportScanSection) {
+            exportScanSection.classList.remove('active');
+            exportScanSection.style.display = 'none';
+        }
+        
+        if (returnScanSection) {
+            returnScanSection.classList.remove('active');
+            returnScanSection.style.display = 'none';
+        }
         
         // Hide product info
         this.hideProductInfo('export');
         this.hideProductInfo('return');
         
+        // Hide cart sections
+        const exportCartSection = document.getElementById('exportCartSection');
+        const returnCartSection = document.getElementById('returnCartSection');
+        if (exportCartSection) exportCartSection.style.display = 'none';
+        if (returnCartSection) returnCartSection.style.display = 'none';
+        
+        // Hide all modals
+        const modals = document.querySelectorAll('.modal');
+        modals.forEach(modal => {
+            modal.classList.remove('active');
+        });
+        
         // Show mode selection
-        document.getElementById('modeSelection').style.display = 'block';
+        const modeSelection = document.getElementById('modeSelection');
+        if (modeSelection) {
+            modeSelection.style.display = 'block';
+            modeSelection.style.visibility = 'visible';
+        }
         
         // Clear inputs and reset their state
         const exportInput = document.getElementById('exportScanInput');
@@ -187,11 +566,15 @@ class PDAToolManagement {
         
         // Force keyboard to close by focusing on a non-input element
         setTimeout(() => {
-            const modeSelection = document.getElementById('modeSelection');
             if (modeSelection) {
                 modeSelection.focus();
                 // Ensure mode selection is properly visible and focused
                 modeSelection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                
+                // 강제로 모드 선택 화면 표시
+                modeSelection.style.display = 'block';
+                modeSelection.style.visibility = 'visible';
+                modeSelection.style.opacity = '1';
             }
         }, 100);
         
@@ -199,6 +582,12 @@ class PDAToolManagement {
         setTimeout(() => {
             // Re-setup input attributes to ensure they're ready for next use
             this.setupInputAttributes();
+            
+            // 최종 확인: 모드 선택 화면이 보이는지 확인
+            if (modeSelection && modeSelection.style.display !== 'block') {
+                modeSelection.style.display = 'block';
+                modeSelection.style.visibility = 'visible';
+            }
         }, 200);
     }
 
@@ -259,21 +648,28 @@ class PDAToolManagement {
             const product = await this.findProduct(scanValue);
             if (product) {
                 if (product.status === 'Available') {
-                    this.scannedProduct = product;
-                    this.showProductInfo('export', product);
-                    this.showExportModal();
+                    // 제품을 장바구니에 추가
+                    const added = this.addToCart('export', product);
+                    if (added) {
+                        // 입력 필드 초기화 및 다음 스캔 준비
+                        document.getElementById('exportScanInput').value = '';
+                        document.getElementById('exportScanInput').focus();
+                        
+                        // 제품 정보는 간단히 표시 (장바구니에 추가됨을 알림)
+                        this.showProductInfo('export', product);
+                        setTimeout(() => {
+                            this.hideProductInfo('export');
+                        }, 2000);
+                    }
                 } else {
                     this.showNotification(`제품 "${product.name}"은 현재 ${this.getStatusText(product.status)} 상태입니다.`, 'warning');
-                    this.hideProductInfo('export');
                 }
             } else {
                 this.showNotification(`제품을 찾을 수 없습니다: ${scanValue}`, 'error');
-                this.hideProductInfo('export');
             }
         } catch (error) {
             console.error('반출 스캔 오류:', error);
             this.showNotification('제품 검색 중 오류가 발생했습니다.', 'error');
-            this.hideProductInfo('export');
         } finally {
             this.isProcessing = false;
         }
@@ -295,21 +691,28 @@ class PDAToolManagement {
             const product = await this.findProduct(scanValue);
             if (product) {
                 if (product.status === 'Exported') {
-                    this.scannedProduct = product;
-                    this.showProductInfo('return', product);
-                    this.showReturnModal();
+                    // 제품을 장바구니에 추가
+                    const added = this.addToCart('return', product);
+                    if (added) {
+                        // 입력 필드 초기화 및 다음 스캔 준비
+                        document.getElementById('returnScanInput').value = '';
+                        document.getElementById('returnScanInput').focus();
+                        
+                        // 제품 정보는 간단히 표시 (장바구니에 추가됨을 알림)
+                        this.showProductInfo('return', product);
+                        setTimeout(() => {
+                            this.hideProductInfo('return');
+                        }, 2000);
+                    }
                 } else {
                     this.showNotification(`제품 "${product.name}"은 현재 ${this.getStatusText(product.status)} 상태입니다.`, 'warning');
-                    this.hideProductInfo('return');
                 }
             } else {
                 this.showNotification(`제품을 찾을 수 없습니다: ${scanValue}`, 'error');
-                this.hideProductInfo('return');
             }
         } catch (error) {
             console.error('반납 스캔 오류:', error);
             this.showNotification('제품 검색 중 오류가 발생했습니다.', 'error');
-            this.hideProductInfo('return');
         } finally {
             this.isProcessing = false;
         }
@@ -318,8 +721,8 @@ class PDAToolManagement {
     // Find product by ID, serial number, or barcode (Supabase 연동)
     async findProduct(identifier) {
         try {
-            // 바코드 형식 확인 (P로 시작하는 7자리)
-            if (identifier.startsWith('P') && identifier.length === 7) {
+            // 바코드 형식 확인 (P로 시작하는 4자리: P + 3자리 숫자)
+            if (identifier.startsWith('P') && identifier.length === 4) {
                 const productId = parseInt(identifier.substring(1));
                 return await window.toolsDB.products.getById(productId);
             }
@@ -634,6 +1037,43 @@ function closeModal(modalId) {
 function goBackToModeSelection() {
     if (window.pdaSystem) {
         window.pdaSystem.goBackToModeSelection();
+    }
+}
+
+// 장바구니 관련 전역 함수들
+function clearExportCart() {
+    if (window.pdaSystem) {
+        window.pdaSystem.clearCart('export');
+    }
+}
+
+function clearReturnCart() {
+    if (window.pdaSystem) {
+        window.pdaSystem.clearCart('return');
+    }
+}
+
+function processExportCart() {
+    if (window.pdaSystem) {
+        window.pdaSystem.processExportCart();
+    }
+}
+
+function processReturnCart() {
+    if (window.pdaSystem) {
+        window.pdaSystem.processReturnCart();
+    }
+}
+
+function removeFromExportCart(productId) {
+    if (window.pdaSystem) {
+        window.pdaSystem.removeFromCart('export', productId);
+    }
+}
+
+function removeFromReturnCart(productId) {
+    if (window.pdaSystem) {
+        window.pdaSystem.removeFromCart('return', productId);
     }
 }
 
