@@ -1443,7 +1443,9 @@
          }
          
          function closeProductDetail() {
-             document.getElementById('productDetailModal').style.display = 'none';
+             if (window.desktopSystem) {
+                 window.desktopSystem.closeProductDetail();
+             }
          }
     </script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>

@@ -82,6 +82,7 @@ class DesktopToolManagement {
         this.updateStats();
         this.renderCategories();
         this.loadCategoryOptions();
+        this.loadExportCategoryFilterOptions();
     }
 
     // Event listeners setup
@@ -102,6 +103,45 @@ class DesktopToolManagement {
                 this.filterProducts(e.target.value);
             });
         }
+
+        // Export search input
+        const exportSearchInput = document.getElementById('exportSearchInput');
+        if (exportSearchInput) {
+            exportSearchInput.addEventListener('input', (e) => {
+                this.filterExportStatus(e.target.value);
+            });
+        }
+
+        // Add event delegation for action buttons
+        document.addEventListener('click', (e) => {
+            const target = e.target;
+            
+            // Check if clicked element is an action button
+            if (target.matches('[data-action]')) {
+                const action = target.getAttribute('data-action');
+                const productId = parseInt(target.getAttribute('data-id'));
+                
+                if (productId && !isNaN(productId)) {
+                    switch (action) {
+                        case 'edit':
+                            this.editProduct(productId);
+                            break;
+                        case 'delete':
+                            this.deleteProduct(productId);
+                            break;
+                        case 'export':
+                            this.changeProductStatus(productId, 'Exported');
+                            break;
+                        case 'return':
+                            this.changeProductStatus(productId, 'Available');
+                            break;
+                        case 'maintenance':
+                            this.changeProductStatus(productId, 'Under Maintenance');
+                            break;
+                    }
+                }
+            }
+        });
     }
 
     // Download products as Excel
@@ -423,6 +463,28 @@ class DesktopToolManagement {
         this.renderFilteredProducts(filteredProducts);
     }
 
+    // Filter export status
+    filterExportStatus(searchTerm) {
+        if (!searchTerm.trim()) {
+            this.renderExportStatus();
+            return;
+        }
+
+        const filteredProducts = this.products.filter(product => 
+            product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (product.maker && product.maker.toLowerCase().includes(searchTerm.toLowerCase())) ||
+            (product.model && product.model.toLowerCase().includes(searchTerm.toLowerCase())) ||
+            (product.specification && product.specification.toLowerCase().includes(searchTerm.toLowerCase())) ||
+            product.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (product.description && product.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
+            (product.serial_number && product.serial_number.toLowerCase().includes(searchTerm.toLowerCase())) ||
+            (product.exported_by && product.exported_by.toLowerCase().includes(searchTerm.toLowerCase())) ||
+            (product.export_purpose && product.export_purpose.toLowerCase().includes(searchTerm.toLowerCase()))
+        );
+
+        this.renderFilteredExportStatus(filteredProducts);
+    }
+
     // Render filtered products
     renderFilteredProducts(filteredProducts) {
         const container = document.getElementById('productsContainer');
@@ -475,6 +537,59 @@ class DesktopToolManagement {
         });
         table.appendChild(tbody);
         
+        return table;
+    }
+
+    // Render filtered export status
+    renderFilteredExportStatus(filteredProducts) {
+        const container = document.getElementById('exportStatusContainer');
+        if (!container) return;
+        
+        container.innerHTML = '';
+
+        if (filteredProducts.length === 0) {
+            container.innerHTML = '<p style="text-align: center; color: #6c757d; padding: 40px;">검색된 제품이 없습니다.</p>';
+            return;
+        }
+
+        // Create filtered export status table
+        const exportTable = this.createFilteredExportStatusTable(filteredProducts);
+        container.appendChild(exportTable);
+    }
+
+    // Create filtered export status table
+    createFilteredExportStatusTable(filteredProducts) {
+        const table = document.createElement('table');
+        table.className = 'products-table export-status-table';
+        const thead = document.createElement('thead');
+        thead.innerHTML = `
+            <tr>
+                <th>제품명</th>
+                <th>메이커</th>
+                <th>모델명</th>
+                <th>규격</th>
+                <th>카테고리</th>
+                <th>현재 상태</th>
+                <th>자산코드</th>
+                <th>시리얼 번호</th>
+                <th>설명</th>
+                <th>구매일</th>
+                <th>워런티</th>
+                <th>등록일</th>
+                <th>반출자</th>
+                <th>반출일</th>
+                <th>반출 목적</th>
+                <th>반출 기간</th>
+                <th>작업</th>
+            </tr>
+        `;
+        table.appendChild(thead);
+        const tbody = document.createElement('tbody');
+        filteredProducts.forEach(product => {
+            const row = this.createExportStatusRow(product);
+            tbody.appendChild(row);
+        });
+        table.appendChild(tbody);
         return table;
     }
 
@@ -662,6 +777,21 @@ class DesktopToolManagement {
         });
     }
 
+    // Load export category filter options
+    loadExportCategoryFilterOptions() {
+        const categoryFilter = document.getElementById('exportCategoryFilter');
+        if (!categoryFilter) return;
+        
+        categoryFilter.innerHTML = '<option value="">전체 카테고리</option>';
+        
+        this.categories.forEach(category => {
+            const option = document.createElement('option');
+            option.value = category.name;
+            option.textContent = category.name;
+            categoryFilter.appendChild(option);
+        });
+    }
+
     // Add new category
     async addNewCategory() {
         const newCategoryInput = document.getElementById('newCategory');
@@ -729,6 +859,38 @@ class DesktopToolManagement {
             }
             counter++;
         }
+    }
+
+    // Filter export status by status
+    filterExportStatusByStatus() {
+        const statusFilter = document.getElementById('exportStatusFilter');
+        if (!statusFilter) return;
+        
+        const selectedStatus = statusFilter.value;
+        
+        if (!selectedStatus) {
+            this.renderExportStatus();
+            return;
+        }
+
+        const filteredProducts = this.products.filter(product => product.status === selectedStatus);
+        this.renderFilteredExportStatus(filteredProducts);
+    }
+
+    // Filter export status by category
+    filterExportStatusByCategory() {
+        const categoryFilter = document.getElementById('exportCategoryFilter');
+        if (!categoryFilter) return;
+        
+        const selectedCategory = categoryFilter.value;
+        
+        if (!selectedCategory) {
+            this.renderExportStatus();
+            return;
+        }
+
+        const filteredProducts = this.products.filter(product => product.category === selectedCategory);
+        this.renderFilteredExportStatus(filteredProducts);
     }
 
     // Delete category
@@ -810,8 +972,14 @@ class DesktopToolManagement {
                 asset_code: this.generateAssetCode(document.getElementById('productCategory').value)
             };
 
-            // 새 제품 추가
-            await this.addProduct(productData);
+            // 편집 모드인지 확인
+            if (this.editingProductId) {
+                // 기존 제품 수정
+                await this.updateProduct(productData);
+            } else {
+                // 새 제품 추가
+                await this.addProduct(productData);
+            }
 
             // Reset form
             form.reset();
@@ -972,6 +1140,12 @@ class DesktopToolManagement {
             
             // 폼을 제품 등록 탭으로 이동
             this.showTab('product-registration');
+            
+            // 제품 등록 섹션으로 스크롤
+            const formSection = document.querySelector('.form-section');
+            if (formSection) {
+                formSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
         }
     }
 
@@ -997,7 +1171,7 @@ class DesktopToolManagement {
             // 편집 모드 종료
             this.editingProductId = null;
             
-            // 폼 초기화
+            // 폼 초기화 및 버튼 텍스트 원래대로
             this.resetForm();
             return true;
         } catch (error) {
@@ -1022,6 +1196,9 @@ class DesktopToolManagement {
         
         // 편집 모드 종료
         this.editingProductId = null;
+        
+        // 제품 등록 탭으로 이동
+        this.showTab('product-registration');
     }
 
     // Show tab
