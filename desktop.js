@@ -78,12 +78,16 @@ class DesktopToolManagement {
             if (window.toolsDB && window.toolsDB.categories) {
                 const categories = await window.toolsDB.categories.getAll();
                 console.log('로드된 카테고리 수:', categories.length);
+                console.log('카테고리 데이터:', categories);
                 
                 this.categories = categories.map(category => ({
+                    id: category.id,
                     name: category.name || '',
-                    code: category.code || category.name?.charAt(0) || 'X'
+                    code: category.code || category.name?.charAt(0) || 'X',
+                    created_at: category.created_at
                 }));
                 
+                console.log('변환된 카테고리 데이터:', this.categories);
                 console.log('카테고리 데이터 로딩 완료');
                 return true;
             } else {
@@ -282,6 +286,7 @@ class DesktopToolManagement {
 
     // Supabase 연결 실패 시 빈 배열 반환 (기본 데이터 없음)
     getEmptyCategories() {
+        console.log('기본 카테고리 배열 반환');
         return [];
     }
 
@@ -1133,68 +1138,81 @@ class DesktopToolManagement {
         return buttons;
     }
 
-    // Render categories
-    renderCategories() {
-        const categoryList = document.getElementById('categoryList');
-        if (!categoryList) return;
-        
-        categoryList.innerHTML = '';
-        
-        this.categories.forEach(category => {
-            const categoryItem = document.createElement('div');
-            categoryItem.className = 'category-item';
-            categoryItem.style.cssText = 'display: inline-block; background: #28a745; color: white; padding: 5px 10px; border-radius: 15px; margin: 2px; font-size: 0.9rem;';
-            
-            const categoryName = document.createElement('span');
-            categoryName.textContent = category.name;
-            
-            const deleteBtn = document.createElement('button');
-            deleteBtn.textContent = '×';
-            deleteBtn.style.cssText = 'background: none; border: none; color: white; margin-left: 8px; cursor: pointer; font-size: 1.2rem; font-weight: bold;';
-            deleteBtn.onclick = () => this.deleteCategory(category.name);
-            
-            categoryItem.appendChild(categoryName);
-            categoryItem.appendChild(deleteBtn);
-            categoryList.appendChild(categoryItem);
-        });
-    }
+
 
     // Load category options
     loadCategoryOptions() {
         const categorySelect = document.getElementById('productCategory');
-        if (!categorySelect) return;
+        if (!categorySelect) {
+            console.warn('productCategory select element not found');
+            return;
+        }
         
         categorySelect.innerHTML = '<option value="">카테고리 선택</option>';
         
+        if (!this.categories || this.categories.length === 0) {
+            console.log('카테고리가 없어서 옵션을 추가할 수 없습니다.');
+            return;
+        }
+        
         this.categories.forEach(category => {
+            if (!category || !category.name) {
+                console.warn('Invalid category object in loadCategoryOptions:', category);
+                return;
+            }
+            
             const option = document.createElement('option');
             option.value = category.name;
             option.textContent = category.name;
             categorySelect.appendChild(option);
         });
+        
+        console.log('카테고리 옵션 로드 완료:', this.categories.length, '개');
     }
 
     // Load export category filter options
     loadExportCategoryFilterOptions() {
         const categoryFilter = document.getElementById('exportCategoryFilter');
-        if (!categoryFilter) return;
+        if (!categoryFilter) {
+            console.warn('exportCategoryFilter element not found');
+            return;
+        }
         
         categoryFilter.innerHTML = '<option value="">전체 카테고리</option>';
         
+        if (!this.categories || this.categories.length === 0) {
+            console.log('카테고리가 없어서 필터 옵션을 추가할 수 없습니다.');
+            return;
+        }
+        
         this.categories.forEach(category => {
+            if (!category || !category.name) {
+                console.warn('Invalid category object in loadExportCategoryFilterOptions:', category);
+                return;
+            }
+            
             const option = document.createElement('option');
             option.value = category.name;
             option.textContent = category.name;
             categoryFilter.appendChild(option);
         });
+        
+        console.log('내보내기 카테고리 필터 옵션 로드 완료:', this.categories.length, '개');
     }
 
     // Add new category
     async addNewCategory() {
+        console.log('addNewCategory 함수 호출됨');
+        
         const newCategoryInput = document.getElementById('newCategory');
-        if (!newCategoryInput) return;
+        if (!newCategoryInput) {
+            console.error('newCategory input element not found');
+            this.showNotification('카테고리 입력 필드를 찾을 수 없습니다.', 'error');
+            return;
+        }
         
         const newCategoryName = newCategoryInput.value.trim();
+        console.log('입력된 카테고리 이름:', newCategoryName);
         
         if (!newCategoryName) {
             this.showNotification('카테고리 이름을 입력해주세요.', 'warning');
@@ -1207,30 +1225,50 @@ class DesktopToolManagement {
         }
         
         try {
-            const nextCode = this.getNextCategoryCode();
+            console.log('Supabase 연결 확인 중...');
+            if (!window.toolsDB || !window.toolsDB.categories) {
+                console.error('toolsDB.categories not available');
+                this.showNotification('데이터베이스 연결을 확인할 수 없습니다.', 'error');
+                return;
+            }
             
+            // 새 카테고리에 자동으로 다음 순서의 코드 부여
+            const nextCode = this.getNextCategoryCode();
+            console.log('생성된 카테고리 코드:', nextCode);
+            
+            // Supabase에 카테고리 추가
             const categoryData = {
                 name: newCategoryName,
                 code: nextCode,
                 created_at: new Date().toISOString()
             };
+            console.log('카테고리 데이터:', categoryData);
             
-            // 로컬 배열에 추가
-            this.categories.push(categoryData);
+            const result = await window.toolsDB.categories.add(categoryData);
+            console.log('Supabase 응답:', result);
             
-            // 입력 필드 초기화
-            newCategoryInput.value = '';
-            
-            // 카테고리 목록 새로고침
-            this.renderCategories();
-            
-            // 제품 등록 폼의 카테고리 선택 옵션 새로고침
-            this.loadCategoryOptions();
-            
-            this.showNotification(`새 카테고리 "${newCategoryName}"이(가) 코드 "${nextCode}"로 추가되었습니다.`, 'success');
+            if (result && result.id) {
+                // 로컬 배열에 추가 (ID 포함)
+                this.categories.push(result);
+                console.log('로컬 카테고리 배열 업데이트됨:', this.categories);
+                
+                // 입력 필드 초기화
+                newCategoryInput.value = '';
+                
+                // 카테고리 목록 새로고침
+                this.renderCategories();
+                
+                // 제품 등록 폼의 카테고리 선택 옵션 새로고침
+                this.loadCategoryOptions();
+                
+                this.showNotification(`새 카테고리 "${newCategoryName}"이(가) 코드 "${nextCode}"로 추가되었습니다.`, 'success');
+            } else {
+                console.error('카테고리 추가 실패: result is null or missing id');
+                this.showNotification('카테고리 추가에 실패했습니다.', 'error');
+            }
         } catch (error) {
             console.error('카테고리 추가 실패:', error);
-            this.showNotification('카테고리 추가 중 오류가 발생했습니다.', 'error');
+            this.showNotification(`카테고리 추가 중 오류가 발생했습니다: ${error.message}`, 'error');
         }
     }
 
@@ -1290,34 +1328,7 @@ class DesktopToolManagement {
         this.renderFilteredExportStatus(filteredProducts);
     }
 
-    // Delete category
-    async deleteCategory(categoryName) {
-        // 해당 카테고리를 사용하는 제품이 있는지 확인
-        const productsUsingCategory = this.products.filter(p => p.category === categoryName);
-        
-        if (productsUsingCategory.length > 0) {
-            this.showNotification(`카테고리 "${categoryName}"를 사용하는 제품이 ${productsUsingCategory.length}개 있습니다. 먼저 제품의 카테고리를 변경해주세요.`, 'warning');
-            return;
-        }
-        
-        if (confirm(`카테고리 "${categoryName}"를 삭제하시겠습니까?`)) {
-            try {
-                // 로컬 배열에서 제거
-                this.categories = this.categories.filter(c => c.name !== categoryName);
-                
-                // 카테고리 목록 새로고침
-                this.renderCategories();
-                
-                // 제품 등록 폼의 카테고리 선택 옵션 새로고침
-                this.loadCategoryOptions();
-                
-                this.showNotification(`카테고리 "${categoryName}"가 성공적으로 삭제되었습니다.`, 'success');
-            } catch (error) {
-                console.error('카테고리 삭제 실패:', error);
-                this.showNotification('카테고리 삭제 중 오류가 발생했습니다.', 'error');
-            }
-        }
-    }
+
 
     // Format warranty date with styling
     formatWarrantyDate(warrantyDate) {
@@ -1956,15 +1967,30 @@ class DesktopToolManagement {
     // Render categories
     renderCategories() {
         const categoryList = document.getElementById('categoryList');
+        if (!categoryList) {
+            console.warn('categoryList element not found');
+            return;
+        }
+        
         categoryList.innerHTML = '';
         
+        if (!this.categories || this.categories.length === 0) {
+            categoryList.innerHTML = '<p style="color: #666; font-style: italic;">등록된 카테고리가 없습니다.</p>';
+            return;
+        }
+        
         this.categories.forEach(category => {
+            if (!category || !category.name) {
+                console.warn('Invalid category object:', category);
+                return;
+            }
+            
             const categoryItem = document.createElement('div');
             categoryItem.className = 'category-item';
             categoryItem.style.cssText = 'display: inline-block; background: #28a745; color: white; padding: 5px 10px; border-radius: 15px; margin: 2px; font-size: 0.9rem;';
             
             const categoryName = document.createElement('span');
-            categoryName.textContent = category.name; // Assuming category is an object { name: "Category Name" }
+            categoryName.textContent = category.name;
             
             const deleteBtn = document.createElement('button');
             deleteBtn.textContent = '×';
@@ -1975,83 +2001,18 @@ class DesktopToolManagement {
             categoryItem.appendChild(deleteBtn);
             categoryList.appendChild(categoryItem);
         });
+        
+        console.log('카테고리 렌더링 완료:', this.categories.length, '개');
     }
 
-    // Add new category
-    async addNewCategory() {
-        const newCategoryInput = document.getElementById('newCategory');
-        const newCategoryName = newCategoryInput.value.trim();
-        
-        if (!newCategoryName) {
-            this.showNotification('카테고리 이름을 입력해주세요.', 'warning');
-            return;
-        }
-        
-        if (this.categories.some(c => c.name === newCategoryName)) { // Check if category name already exists
-            this.showNotification('이미 존재하는 카테고리입니다.', 'warning');
-            return;
-        }
-        
-        try {
-            // 새 카테고리에 자동으로 다음 순서의 코드 부여
-            const nextCode = this.getNextCategoryCode();
-            
-            // Supabase에 카테고리 추가
-            const categoryData = {
-                name: newCategoryName,
-                code: nextCode,
-                created_at: new Date().toISOString()
-            };
-            const result = await window.toolsDB.categories.add(categoryData);
-            if (result && result.id) {
-                // 로컬 배열에 추가 (ID 포함)
-                this.categories.push(result);
-                
-                // 입력 필드 초기화
-                newCategoryInput.value = '';
-                
-                // 카테고리 목록 새로고침
-                this.renderCategories();
-                
-                // 제품 등록 폼의 카테고리 선택 옵션 새로고침
-                this.loadCategoryOptions();
-                
-                this.showNotification(`새 카테고리 "${newCategoryName}"이(가) 코드 "${nextCode}"로 추가되었습니다.`, 'success');
-            } else {
-                this.showNotification('카테고리 추가에 실패했습니다.', 'error');
-            }
-        } catch (error) {
-            console.error('카테고리 추가 실패:', error);
-            this.showNotification('카테고리 추가 중 오류가 발생했습니다.', 'error');
-        }
-    }
 
-    // Get next category code (A, B, C, D, E...)
-    getNextCategoryCode() {
-        const existingCodes = this.categories.map(c => c.code).filter(code => code);
-        const usedCodes = new Set(existingCodes);
-        
-        // A부터 Z까지 순서대로 사용 가능한 코드 찾기
-        for (let i = 65; i <= 90; i++) { // ASCII: A=65, Z=90
-            const code = String.fromCharCode(i);
-            if (!usedCodes.has(code)) {
-                return code;
-            }
-        }
-        
-        // A-Z를 모두 사용한 경우 AA, AB, AC... 형태로 확장
-        let counter = 1;
-        while (true) {
-            const code = `A${String.fromCharCode(64 + counter)}`; // A1, A2, A3...
-            if (!usedCodes.has(code)) {
-                return code;
-            }
-            counter++;
-        }
-    }
+
+
 
     // Delete category
     async deleteCategory(categoryName) {
+        console.log('deleteCategory 함수 호출됨:', categoryName);
+        
         // 해당 카테고리를 사용하는 제품이 있는지 확인
         const productsUsingCategory = this.products.filter(p => p.category === categoryName);
         
@@ -2062,9 +2023,17 @@ class DesktopToolManagement {
         
         if (confirm(`카테고리 "${categoryName}"를 삭제하시겠습니까?`)) {
             try {
+                console.log('Supabase 연결 확인 중...');
+                if (!window.toolsDB || !window.toolsDB.categories) {
+                    console.error('toolsDB.categories not available');
+                    this.showNotification('데이터베이스 연결을 확인할 수 없습니다.', 'error');
+                    return;
+                }
+                
                 // 카테고리 ID 찾기
                 const categoryToDelete = this.categories.find(c => c.name === categoryName);
                 if (!categoryToDelete || !categoryToDelete.id) {
+                    console.error('카테고리를 찾을 수 없음:', categoryName);
                     this.showNotification('카테고리 ID를 찾을 수 없습니다.', 'error');
                     return;
                 }
@@ -2073,6 +2042,7 @@ class DesktopToolManagement {
                 const numericId = parseInt(categoryToDelete.id);
                 
                 if (isNaN(numericId)) {
+                    console.error('잘못된 카테고리 ID:', categoryToDelete.id);
                     this.showNotification('잘못된 카테고리 ID입니다.', 'error');
                     return;
                 }
@@ -2081,9 +2051,12 @@ class DesktopToolManagement {
                 
                 // Supabase에서 카테고리 삭제 (ID 사용)
                 const success = await window.toolsDB.categories.delete(numericId);
+                console.log('삭제 결과:', success);
+                
                 if (success) {
                     // 로컬 배열에서 제거
                     this.categories = this.categories.filter(c => c.id !== categoryToDelete.id);
+                    console.log('로컬 카테고리 배열에서 제거됨:', this.categories);
                     
                     // 카테고리 목록 새로고침
                     this.renderCategories();
@@ -2093,11 +2066,12 @@ class DesktopToolManagement {
                     
                     this.showNotification(`카테고리 "${categoryName}"가 성공적으로 삭제되었습니다.`, 'success');
                 } else {
+                    console.error('Supabase에서 카테고리 삭제 실패');
                     this.showNotification('카테고리 삭제에 실패했습니다.', 'error');
                 }
             } catch (error) {
                 console.error('카테고리 삭제 실패:', error);
-                this.showNotification('카테고리 삭제 중 오류가 발생했습니다.', 'error');
+                this.showNotification(`카테고리 삭제 중 오류가 발생했습니다: ${error.message}`, 'error');
             }
         }
     }

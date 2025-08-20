@@ -445,32 +445,68 @@ class PDAToolManagement {
 
     // Select mode (export or return)
     selectMode(mode) {
+        console.log('selectMode 호출됨:', mode);
+        
         this.currentMode = mode;
         
         // Hide mode selection
-        document.getElementById('modeSelection').style.display = 'none';
+        const modeSelection = document.getElementById('modeSelection');
+        if (modeSelection) {
+            modeSelection.style.display = 'none';
+            modeSelection.style.visibility = 'hidden';
+        }
         
         // Reset all input fields to ensure clean state
         this.resetInputFields();
         
         if (mode === 'export') {
+            console.log('반출 모드 선택됨, 사용자 이름 모달 표시');
             // Show user name modal first for export
             this.showExportUserNameModal();
         } else if (mode === 'return') {
+            console.log('반납 모드 선택됨, 반납 스캔 섹션 표시');
             // Show return scan section directly
-            document.getElementById('returnScanSection').classList.add('active');
-            // Focus on scan input and force keyboard to open
-            setTimeout(() => {
-                const scanInput = document.getElementById('returnScanInput');
-                if (scanInput) {
-                    scanInput.focus();
-                    // Force keyboard to open on tablet
-                    scanInput.click();
-                    // Set input mode for better tablet keyboard
-                    scanInput.setAttribute('inputmode', 'text');
-                }
-            }, 200);
+            this.showReturnScanSection();
         }
+    }
+    
+    // Show return scan section
+    showReturnScanSection() {
+        console.log('showReturnScanSection 호출됨');
+        
+        // 모든 다른 섹션과 모달을 숨김
+        this.hideAllSections();
+        
+        const returnScanSection = document.getElementById('returnScanSection');
+        if (!returnScanSection) {
+            console.error('returnScanSection을 찾을 수 없습니다.');
+            return;
+        }
+        
+        // 반납 스캔 섹션을 강제로 표시
+        returnScanSection.style.display = 'block';
+        returnScanSection.classList.add('active');
+        returnScanSection.style.visibility = 'visible';
+        returnScanSection.style.opacity = '1';
+        
+        // 스캔 입력 필드 초기화 및 포커스
+        setTimeout(() => {
+            const scanInput = document.getElementById('returnScanInput');
+            if (scanInput) {
+                scanInput.focus();
+                // Force keyboard to open on tablet
+                scanInput.click();
+                // Set input mode for better tablet keyboard
+                scanInput.setAttribute('inputmode', 'text');
+                scanInput.setAttribute('autocapitalize', 'none');
+                scanInput.setAttribute('autocorrect', 'off');
+                scanInput.setAttribute('spellcheck', 'false');
+                
+                console.log('반납 스캔 섹션 표시됨, 입력 필드 포커스됨');
+            } else {
+                console.error('returnScanInput을 찾을 수 없습니다.');
+            }
+        }, 200);
     }
 
     // Reset all input fields to ensure clean state
@@ -494,8 +530,54 @@ class PDAToolManagement {
         });
     }
 
+    // Hide all sections and modals
+    hideAllSections() {
+        console.log('hideAllSections 호출됨');
+        
+        // 모든 스캔 섹션 숨기기
+        const exportScanSection = document.getElementById('exportScanSection');
+        const returnScanSection = document.getElementById('returnScanSection');
+        
+        if (exportScanSection) {
+            exportScanSection.style.display = 'none';
+            exportScanSection.classList.remove('active');
+            exportScanSection.style.visibility = 'hidden';
+            exportScanSection.style.opacity = '0';
+        }
+        
+        if (returnScanSection) {
+            returnScanSection.style.display = 'none';
+            returnScanSection.classList.remove('active');
+            returnScanSection.style.visibility = 'hidden';
+            returnScanSection.style.opacity = '0';
+        }
+        
+        // 모든 모달 숨기기
+        const modals = document.querySelectorAll('.modal');
+        modals.forEach(modal => {
+            modal.style.display = 'none';
+            modal.classList.remove('active');
+            modal.style.visibility = 'hidden';
+            modal.style.opacity = '0';
+        });
+        
+        // 장바구니 섹션 숨기기
+        const exportCartSection = document.getElementById('exportCartSection');
+        const returnCartSection = document.getElementById('returnCartSection');
+        if (exportCartSection) exportCartSection.style.display = 'none';
+        if (returnCartSection) returnCartSection.style.display = 'none';
+        
+        // 제품 정보 숨기기
+        this.hideProductInfo('export');
+        this.hideProductInfo('return');
+        
+        console.log('모든 섹션과 모달이 숨겨짐');
+    }
+
     // Go back to mode selection
     goBackToModeSelection() {
+        console.log('goBackToModeSelection 호출됨');
+        
         this.currentMode = null;
         this.scannedProduct = null;
         this.currentExportUser = null;
@@ -504,41 +586,15 @@ class PDAToolManagement {
         this.exportCart = [];
         this.returnCart = [];
         
-        // Hide all scan sections
-        const exportScanSection = document.getElementById('exportScanSection');
-        const returnScanSection = document.getElementById('returnScanSection');
-        
-        if (exportScanSection) {
-            exportScanSection.classList.remove('active');
-            exportScanSection.style.display = 'none';
-        }
-        
-        if (returnScanSection) {
-            returnScanSection.classList.remove('active');
-            returnScanSection.style.display = 'none';
-        }
-        
-        // Hide product info
-        this.hideProductInfo('export');
-        this.hideProductInfo('return');
-        
-        // Hide cart sections
-        const exportCartSection = document.getElementById('exportCartSection');
-        const returnCartSection = document.getElementById('returnCartSection');
-        if (exportCartSection) exportCartSection.style.display = 'none';
-        if (returnCartSection) returnCartSection.style.display = 'none';
-        
-        // Hide all modals
-        const modals = document.querySelectorAll('.modal');
-        modals.forEach(modal => {
-            modal.classList.remove('active');
-        });
+        // 모든 섹션과 모달을 숨김
+        this.hideAllSections();
         
         // Show mode selection
         const modeSelection = document.getElementById('modeSelection');
         if (modeSelection) {
             modeSelection.style.display = 'block';
             modeSelection.style.visibility = 'visible';
+            modeSelection.style.opacity = '1';
         }
         
         // Clear inputs and reset their state
@@ -589,45 +645,101 @@ class PDAToolManagement {
                 modeSelection.style.visibility = 'visible';
             }
         }, 200);
+        
+        console.log('모드 선택 화면으로 돌아감');
     }
 
     // Show export user name modal (first step)
     showExportUserNameModal() {
+        console.log('showExportUserNameModal 호출됨');
+        
         const modal = document.getElementById('exportUserNameModal');
+        if (!modal) {
+            console.error('exportUserNameModal을 찾을 수 없습니다.');
+            return;
+        }
+        
+        // 모든 다른 섹션과 모달을 숨김
+        this.hideAllSections();
+        
+        // 모달을 강제로 표시
+        modal.style.display = 'flex';
         modal.classList.add('active');
-        document.getElementById('exportUserName').focus();
+        modal.style.visibility = 'visible';
+        modal.style.opacity = '1';
+        modal.style.zIndex = '1000';
+        
+        // 입력 필드 초기화 및 포커스
+        const userNameInput = document.getElementById('exportUserName');
+        if (userNameInput) {
+            userNameInput.value = '';
+            userNameInput.focus();
+            // 타블렛 키보드 강제 열기
+            userNameInput.click();
+        }
+        
+        console.log('반출자 이름 모달 표시됨');
     }
 
     // Confirm export user name (first step)
     confirmExportUserName() {
+        console.log('confirmExportUserName 호출됨');
+        
         const userName = document.getElementById('exportUserName').value.trim();
         if (!userName) {
             this.showNotification('반출자 이름을 입력해주세요.', 'warning');
             return;
         }
 
+        console.log('반출자 이름 확인됨:', userName);
         this.currentExportUser = userName;
         
         // Close user name modal
         this.closeModal('exportUserNameModal');
         
-        // Show export scan section
-        document.getElementById('exportScanSection').classList.add('active');
+        // Show export scan section with proper timing
+        setTimeout(() => {
+            this.showExportScanSection();
+        }, 100);
+    }
+    
+    // Show export scan section
+    showExportScanSection() {
+        console.log('showExportScanSection 호출됨');
         
-        // Reset and focus on scan input and force keyboard to open
+        // 모든 다른 섹션과 모달을 숨김
+        this.hideAllSections();
+        
+        const exportScanSection = document.getElementById('exportScanSection');
+        if (!exportScanSection) {
+            console.error('exportScanSection을 찾을 수 없습니다.');
+            return;
+        }
+        
+        // 반출 스캔 섹션을 강제로 표시
+        exportScanSection.style.display = 'block';
+        exportScanSection.classList.add('active');
+        exportScanSection.style.visibility = 'visible';
+        exportScanSection.style.opacity = '1';
+        
+        // 스캔 입력 필드 초기화 및 포커스
         setTimeout(() => {
             const scanInput = document.getElementById('exportScanInput');
             if (scanInput) {
-                // Ensure clean state
+                // 입력 필드 초기화
                 scanInput.value = '';
                 scanInput.setAttribute('inputmode', 'text');
                 scanInput.setAttribute('autocapitalize', 'none');
                 scanInput.setAttribute('autocorrect', 'off');
                 scanInput.setAttribute('spellcheck', 'false');
                 
-                // Force focus and keyboard to open
+                // 강제 포커스 및 키보드 열기
                 scanInput.focus();
                 scanInput.click();
+                
+                console.log('반출 스캔 섹션 표시됨, 입력 필드 포커스됨');
+            } else {
+                console.error('exportScanInput을 찾을 수 없습니다.');
             }
         }, 200);
     }
@@ -764,13 +876,30 @@ class PDAToolManagement {
 
     // Close modal
     closeModal(modalId) {
+        console.log('closeModal 호출됨:', modalId);
+        
         const modal = document.getElementById(modalId);
+        if (!modal) {
+            console.error('모달을 찾을 수 없습니다:', modalId);
+            return;
+        }
+        
+        // 모달을 강제로 숨김
+        modal.style.display = 'none';
         modal.classList.remove('active');
+        modal.style.visibility = 'hidden';
+        modal.style.opacity = '0';
         
         // Clear appropriate input
         if (modalId === 'exportUserNameModal') {
-            document.getElementById('exportUserName').value = '';
+            const userNameInput = document.getElementById('exportUserName');
+            if (userNameInput) {
+                userNameInput.value = '';
+                userNameInput.blur();
+            }
         }
+        
+        console.log('모달이 닫힘:', modalId);
     }
 
     // Confirm export (Supabase 연동)
