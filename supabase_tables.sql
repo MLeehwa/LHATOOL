@@ -29,11 +29,12 @@ CREATE TABLE tools_products (
     warranty_date DATE,                            -- 워런티 만료일 (선택사항)
     asset_code VARCHAR(50),                        -- 자산코드 (카테고리별 관리코드)
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),  -- 수정일 (코드에서 사용)
     last_modified TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     exported_by VARCHAR(100),                      -- 반출자
     exported_date TIMESTAMP WITH TIME ZONE,        -- 반출일
     export_purpose TEXT,                           -- 반출 목적
-    barcode VARCHAR(50) UNIQUE,                    -- 바코드
+    barcode VARCHAR(50),                           -- 바코드 (UNIQUE 제약 제거)
     item_number INTEGER DEFAULT 1                  -- 동일 제품 내 번호 (1, 2, 3...)
 );
 
@@ -49,20 +50,13 @@ CREATE TABLE tools_export_history (
     notes TEXT
 );
 
--- 기본 카테고리 데이터
+-- 기본 카테고리 데이터만 유지 (제품 데이터는 제거)
 INSERT INTO tools_categories (name, code) VALUES 
     ('전동공구', 'A'),
     ('수동공구', 'B'),
     ('측정도구', 'C'),
     ('안전장비', 'D'),
     ('기타', 'E');
-
--- 기본 제품 데이터 (메이커, 모델, 규격 포함)
-INSERT INTO tools_products (name, maker, model, specification, category, status, description, serial_number, purchase_date, barcode, item_number) VALUES 
-    ('임팩트 드릴', '보쉬', 'GBH 2-26', '26mm 해머드릴, 800W', '전동공구', 'Available', '26mm 해머드릴, 800W', 'DR001-2024', '2024-01-15', 'P001', 1),
-    ('임팩트 드릴', '보쉬', 'GBH 2-26', '26mm 해머드릴, 800W', '전동공구', 'Available', '26mm 해머드릴, 800W', 'DR002-2024', '2024-01-15', 'P002', 2),
-    ('해머', '스탠리', 'AntiVibe', '1kg 철망치, 진동감소', '수동공구', 'Available', '1kg 철망치, 진동감소', 'HM001-2024', '2024-02-01', 'P003', 1),
-    ('줄자', '스탠리', 'PowerLock', '5m 자동잠금, 25mm 폭', '측정도구', 'Exported', '5m 자동잠금, 25mm 폭', 'TM001-2024', '2024-01-20', 'P004', 1);
 
 -- RLS 활성화 및 정책 설정
 ALTER TABLE tools_categories ENABLE ROW LEVEL SECURITY;
@@ -79,3 +73,18 @@ CREATE INDEX idx_products_maker_model ON tools_products(maker, model);
 CREATE INDEX idx_products_category ON tools_products(category);
 CREATE INDEX idx_products_status ON tools_products(status);
 CREATE INDEX idx_products_barcode ON tools_products(barcode);
+
+-- updated_at 자동 업데이트를 위한 트리거 함수
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+-- tools_products 테이블에 트리거 적용
+CREATE TRIGGER update_tools_products_updated_at 
+    BEFORE UPDATE ON tools_products 
+    FOR EACH ROW 
+    EXECUTE FUNCTION update_updated_at_column();

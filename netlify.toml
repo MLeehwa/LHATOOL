@@ -12,5 +12,19 @@
   to = "/index.html"
   status = 200
 
+# JavaScript 파일 캐싱 최적화
+[[headers]]
+  for = "*.js"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+    X-Content-Type-Options = "nosniff"
+
+# HTML 파일 캐싱 최적화
+[[headers]]
+  for = "*.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+    X-Content-Type-Options = "nosniff"
+
 [build.environment]
   NODE_VERSION = "18"

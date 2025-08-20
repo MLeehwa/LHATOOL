@@ -7,82 +7,464 @@ class DesktopToolManagement {
         // 반출 이력 캐시 추가
         this.exportHistoryCache = new Map();
         
-        // 기본 데이터 초기화
-        this.products = this.getDefaultProducts();
-        this.categories = this.getDefaultCategories();
+        // Netlify 환경에서의 안정성을 위한 설정
+        this.isNetlify = window.location.hostname.includes('netlify.app') || 
+                         window.location.hostname.includes('netlify.com');
+        
+        console.log('DesktopToolManagement 초기화 시작');
+        console.log('Netlify 환경:', this.isNetlify);
+        
+        // 데이터 초기화 (Supabase에서 로드)
+        this.products = [];
+        this.categories = [];
+        
+        // Handsontable 관련 속성
+        this.batchTable = null;
+        this.batchData = [];
         
         // 초기화
         this.init();
     }
 
-    // Default product data
-    getDefaultProducts() {
-        return [
-            {
-                id: 1,
-                name: '18V 임팩트 드릴',
-                maker: '보쉬',
-                model: 'GBH 2-26',
-                specification: '26mm 해머드릴, 800W',
-                category: '전동공구',
-                status: 'Available',
-                description: '18V 리튬이온 배터리 임팩트 드릴',
-                serial_number: 'DR001-2024',
-                purchase_date: '2024-01-15',
-                barcode: 'P001'
-            },
-            {
-                id: 2,
-                name: '해머',
-                maker: '스탠리',
-                model: 'AntiVibe',
-                specification: '1kg 철망치, 진동감소',
-                category: '수동공구',
-                status: 'Available',
-                description: '1kg 철망치',
-                serial_number: 'HM001-2024',
-                purchase_date: '2024-02-01',
-                barcode: 'P002'
-            },
-            {
-                id: 3,
-                name: '줄자',
-                maker: '스탠리',
-                model: 'PowerLock',
-                specification: '5m 자동잠금, 25mm 폭',
-                category: '측정도구',
-                status: 'Exported',
-                description: '5m 줄자',
-                serial_number: 'TM001-2024',
-                purchase_date: '2024-01-20',
-                exported_by: '김철수',
-                exported_date: new Date().toISOString(),
-                export_purpose: '현장작업',
-                barcode: 'P003'
+    // Supabase에서 제품 데이터 로드
+    async loadProductsFromDatabase() {
+        try {
+            console.log('Supabase에서 제품 데이터 로딩 시작...');
+            
+            if (window.toolsDB && window.toolsDB.products) {
+                const products = await window.toolsDB.products.getAll();
+                console.log('로드된 제품 수:', products.length);
+                
+                // 데이터 형식 변환 (Supabase 형식에 맞춤)
+                this.products = products.map(product => ({
+                    id: product.id,
+                    name: product.name || '',
+                    maker: product.maker || '',
+                    model: product.model || '',
+                    specification: product.specification || '',
+                    category: product.category || '',
+                    status: product.status || 'Available',
+                    description: product.description || '',
+                    serial_number: product.serial_number || '',
+                    purchase_date: product.purchase_date || '',
+                    barcode: product.barcode || '',
+                    exported_by: product.exported_by || '',
+                    exported_date: product.exported_date || '',
+                    export_purpose: product.export_purpose || '',
+                    created_at: product.created_at || '',
+                    updated_at: product.updated_at || ''
+                }));
+                
+                console.log('제품 데이터 로딩 완료');
+                return true;
+            } else {
+                console.warn('toolsDB가 아직 로드되지 않음, 빈 배열 사용');
+                this.products = this.getEmptyProducts();
+                return false;
             }
-        ];
+        } catch (error) {
+            console.error('제품 데이터 로딩 중 오류:', error);
+            console.warn('빈 배열 사용');
+            this.products = this.getEmptyProducts();
+            return false;
+        }
     }
 
-    // Default categories
-    getDefaultCategories() {
-        return [
-            { name: '전동공구', code: 'A' },
-            { name: '수동공구', code: 'B' },
-            { name: '측정도구', code: 'C' },
-            { name: '안전장비', code: 'D' },
-            { name: '기타', code: 'E' }
-        ];
+    // Supabase에서 카테고리 데이터 로드
+    async loadCategoriesFromDatabase() {
+        try {
+            console.log('Supabase에서 카테고리 데이터 로딩 시작...');
+            
+            if (window.toolsDB && window.toolsDB.categories) {
+                const categories = await window.toolsDB.categories.getAll();
+                console.log('로드된 카테고리 수:', categories.length);
+                
+                this.categories = categories.map(category => ({
+                    name: category.name || '',
+                    code: category.code || category.name?.charAt(0) || 'X'
+                }));
+                
+                console.log('카테고리 데이터 로딩 완료');
+                return true;
+            } else {
+                console.warn('toolsDB가 아직 로드되지 않음, 빈 배열 사용');
+                this.categories = this.getEmptyCategories();
+                return false;
+            }
+        } catch (error) {
+            console.error('카테고리 데이터 로딩 중 오류:', error);
+            console.warn('빈 배열 사용');
+            this.categories = this.getEmptyCategories();
+            return false;
+        }
+    }
+
+    // 데이터베이스에 제품 추가
+    async addProductToDatabase(productData) {
+        try {
+            if (window.toolsDB && window.toolsDB.products) {
+                console.log('Supabase에 제품 추가:', productData);
+                
+                // 바코드가 있는 경우 중복 검사
+                if (productData.barcode && productData.barcode.trim()) {
+                    const existingProduct = await window.toolsDB.products.getByBarcode(productData.barcode.trim());
+                    if (existingProduct) {
+                        console.warn('바코드가 이미 존재합니다:', productData.barcode);
+                        alert('이미 존재하는 바코드입니다. 다른 바코드를 사용해주세요.');
+                        return null;
+                    }
+                }
+                
+                const newProduct = await window.toolsDB.products.add({
+                    name: productData.name,
+                    maker: productData.maker,
+                    model: productData.model,
+                    specification: productData.specification,
+                    category: productData.category,
+                    status: productData.status || 'Available',
+                    description: productData.description,
+                    serial_number: productData.serial_number,
+                    purchase_date: productData.purchase_date,
+                    barcode: productData.barcode && productData.barcode.trim() ? productData.barcode.trim() : null,
+                    asset_code: productData.asset_code
+                });
+                
+                if (newProduct) {
+                    console.log('제품 추가 성공:', newProduct);
+                    return newProduct;
+                } else {
+                    console.error('제품 추가 실패');
+                    alert('제품 추가에 실패했습니다. 다시 시도해주세요.');
+                    return null;
+                }
+            } else {
+                console.warn('toolsDB를 사용할 수 없음, 로컬에만 추가');
+                alert('데이터베이스 연결에 실패했습니다. 페이지를 새로고침해주세요.');
+                return null;
+            }
+        } catch (error) {
+            console.error('제품 추가 중 오류:', error);
+            alert('제품 추가 중 오류가 발생했습니다: ' + (error.message || '알 수 없는 오류'));
+            return null;
+        }
+    }
+
+    // 데이터베이스에서 제품 업데이트
+    async updateProductInDatabase(productId, updateData) {
+        try {
+            if (window.toolsDB && window.toolsDB.products) {
+                console.log('Supabase에서 제품 업데이트:', productId, updateData);
+                
+                // 바코드가 변경된 경우 중복 검사
+                if (updateData.barcode && updateData.barcode.trim()) {
+                    const existingProduct = await window.toolsDB.products.getByBarcode(updateData.barcode.trim());
+                    if (existingProduct && existingProduct.id !== productId) {
+                        console.warn('바코드가 이미 다른 제품에 존재합니다:', updateData.barcode);
+                        alert('이미 존재하는 바코드입니다. 다른 바코드를 사용해주세요.');
+                        return null;
+                    }
+                }
+                
+                const updatedProduct = await window.toolsDB.products.update(productId, {
+                    name: updateData.name,
+                    maker: updateData.maker,
+                    model: updateData.model,
+                    specification: updateData.specification,
+                    category: updateData.category,
+                    status: updateData.status,
+                    description: updateData.description,
+                    serial_number: updateData.serial_number,
+                    purchase_date: updateData.purchase_date,
+                    barcode: updateData.barcode ? updateData.barcode.trim() : null,
+                    asset_code: updateData.asset_code
+                    // updated_at은 트리거가 자동으로 처리
+                });
+                
+                if (updatedProduct) {
+                    console.log('제품 업데이트 성공:', updatedProduct);
+                    return updatedProduct;
+                } else {
+                    console.error('제품 업데이트 실패');
+                    alert('제품 수정에 실패했습니다. 다시 시도해주세요.');
+                    return null;
+                }
+            } else {
+                console.warn('toolsDB를 사용할 수 없음, 로컬에만 업데이트');
+                alert('데이터베이스 연결에 실패했습니다. 페이지를 새로고침해주세요.');
+                return null;
+            }
+        } catch (error) {
+            console.error('제품 업데이트 중 오류:', error);
+            alert('제품 수정 중 오류가 발생했습니다: ' + (error.message || '알 수 없는 오류'));
+            return null;
+        }
+    }
+
+    // 데이터베이스에서 제품 삭제
+    async deleteProductFromDatabase(productId) {
+        try {
+            if (window.toolsDB && window.toolsDB.products) {
+                console.log('Supabase에서 제품 삭제:', productId);
+                
+                // 제품이 반출 이력에 있는지 확인
+                if (window.toolsDB.exportHistory) {
+                    const exportHistory = await window.toolsDB.exportHistory.getByProductId(productId);
+                    if (exportHistory && exportHistory.length > 0) {
+                        console.warn('반출 이력이 있는 제품은 삭제할 수 없습니다:', productId);
+                        alert('반출 이력이 있는 제품은 삭제할 수 없습니다. 먼저 반출 이력을 정리해주세요.');
+                        return false;
+                    }
+                }
+                
+                const success = await window.toolsDB.products.delete(productId);
+                
+                if (success) {
+                    console.log('제품 삭제 성공');
+                    return true;
+                } else {
+                    console.error('제품 삭제 실패');
+                    alert('제품 삭제에 실패했습니다. 다시 시도해주세요.');
+                    return false;
+                }
+            } else {
+                console.warn('toolsDB를 사용할 수 없음, 로컬에서만 삭제');
+                alert('데이터베이스 연결에 실패했습니다. 페이지를 새로고침해주세요.');
+                return false;
+            }
+        } catch (error) {
+            console.error('제품 삭제 중 오류:', error);
+            alert('제품 삭제 중 오류가 발생했습니다: ' + (error.message || '알 수 없는 오류'));
+            return false;
+        }
+    }
+
+    // 데이터베이스에서 제품 상태 변경
+    async changeProductStatusInDatabase(productId, newStatus, additionalData = {}) {
+        try {
+            if (window.toolsDB && window.toolsDB.products) {
+                console.log('Supabase에서 제품 상태 변경:', productId, newStatus);
+                
+                const updateData = {
+                    status: newStatus,
+                    updated_at: new Date().toISOString()
+                };
+                
+                // 반출 관련 추가 정보
+                if (newStatus === 'Exported' && additionalData.exported_by) {
+                    updateData.exported_by = additionalData.exported_by;
+                    updateData.exported_date = new Date().toISOString();
+                    updateData.export_purpose = additionalData.export_purpose || '현장작업';
+                }
+                
+                const updatedProduct = await window.toolsDB.products.update(productId, updateData);
+                
+                if (updatedProduct) {
+                    console.log('제품 상태 변경 성공:', updatedProduct);
+                    return updatedProduct;
+                } else {
+                    console.error('제품 상태 변경 실패');
+                    return null;
+                }
+            } else {
+                console.warn('toolsDB를 사용할 수 없음, 로컬에서만 상태 변경');
+                return null;
+            }
+        } catch (error) {
+            console.error('제품 상태 변경 중 오류:', error);
+            return null;
+        }
+    }
+
+    // Supabase 연결 실패 시 빈 배열 반환 (기본 데이터 없음)
+    getEmptyProducts() {
+        return [];
+    }
+
+    // Supabase 연결 실패 시 빈 배열 반환 (기본 데이터 없음)
+    getEmptyCategories() {
+        return [];
     }
 
     // Initialize
     init() {
-        this.setupEventListeners();
-        this.renderProducts();
-        this.renderExportStatus();
-        this.updateStats();
-        this.renderCategories();
-        this.loadCategoryOptions();
-        this.loadExportCategoryFilterOptions();
+        try {
+            console.log('초기화 시작...');
+            
+            // DOM이 완전히 로드될 때까지 대기
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', async () => {
+                    await this.initializeSystem();
+                });
+            } else {
+                this.initializeSystem();
+            }
+        } catch (error) {
+            console.error('초기화 중 오류 발생:', error);
+            // 재시도 로직
+            setTimeout(() => this.init(), 1000);
+        }
+    }
+    
+    // 실제 초기화 로직
+    async initializeSystem() {
+        try {
+            console.log('시스템 초기화 시작...');
+            
+            // 초기 데이터 상태 설정
+            this.updateDataStatus('loading', '시스템 초기화 중...');
+            
+            // Supabase에서 데이터 로드
+            await this.loadDataFromDatabase();
+            
+            this.setupEventListeners();
+            this.renderProducts();
+            this.renderExportStatus();
+            this.updateStats();
+            this.renderCategories();
+            this.loadCategoryOptions();
+            this.loadExportCategoryFilterOptions();
+            
+            // UI 렌더링
+            this.renderProducts();
+            this.renderCategories();
+            this.updateStats();
+            this.renderExportStatus();
+            
+            // Handsontable 초기화
+            this.initializeBatchTable();
+            
+            console.log('시스템 초기화 완료');
+            
+            // Netlify 환경에서 추가 검증
+            if (this.isNetlify) {
+                this.validateNetlifySetup();
+            }
+        } catch (error) {
+            console.error('시스템 초기화 중 오류:', error);
+            this.updateDataStatus('error', '시스템 초기화 실패');
+        }
+    }
+
+    // 데이터 상태 UI 업데이트
+    updateDataStatus(status, message) {
+        const dataStatus = document.getElementById('dataStatus');
+        if (dataStatus) {
+            // 기존 클래스 제거
+            dataStatus.className = 'data-status';
+            
+            // 상태에 따른 클래스와 메시지 설정
+            switch (status) {
+                case 'loading':
+                    dataStatus.classList.add('loading');
+                    dataStatus.innerHTML = '<span class="spinner"></span><span>' + (message || '데이터 로딩 중...') + '</span>';
+                    break;
+                case 'success':
+                    dataStatus.classList.add('success');
+                    dataStatus.innerHTML = '<span>✅ ' + (message || '데이터 로딩 완료') + '</span>';
+                    break;
+                case 'warning':
+                    dataStatus.classList.add('warning');
+                    dataStatus.innerHTML = '<span>⚠️ ' + (message || '일부 데이터 로딩 실패') + '</span>';
+                    break;
+                case 'error':
+                    dataStatus.classList.add('error');
+                    dataStatus.innerHTML = '<span>❌ ' + (message || '데이터 로딩 실패') + '</span>';
+                    break;
+            }
+        }
+    }
+
+    // Supabase에서 데이터 로드
+    async loadDataFromDatabase() {
+        try {
+            console.log('데이터베이스에서 데이터 로딩 시작...');
+            this.updateDataStatus('loading', 'Supabase 연결 중...');
+            
+            // Supabase가 로드될 때까지 대기
+            let retryCount = 0;
+            const maxRetries = 10;
+            
+            while (!window.toolsDB && retryCount < maxRetries) {
+                console.log(`Supabase 로딩 대기 중... (${retryCount + 1}/${maxRetries})`);
+                this.updateDataStatus('loading', `Supabase 로딩 대기 중... (${retryCount + 1}/${maxRetries})`);
+                await new Promise(resolve => setTimeout(resolve, 500));
+                retryCount++;
+            }
+            
+            if (window.toolsDB) {
+                console.log('Supabase 로딩 완료, 데이터 로딩 시작');
+                this.updateDataStatus('loading', '데이터 로딩 중...');
+                
+                // 제품과 카테고리 데이터를 병렬로 로드
+                const [productsLoaded, categoriesLoaded] = await Promise.allSettled([
+                    this.loadProductsFromDatabase(),
+                    this.loadCategoriesFromDatabase()
+                ]);
+                
+                let successCount = 0;
+                let totalCount = 2;
+                
+                if (productsLoaded.status === 'fulfilled' && productsLoaded.value) {
+                    console.log('제품 데이터 로딩 성공');
+                    successCount++;
+                } else {
+                    console.warn('제품 데이터 로딩 실패');
+                }
+                
+                if (categoriesLoaded.status === 'fulfilled' && categoriesLoaded.value) {
+                    console.log('카테고리 데이터 로딩 성공');
+                    successCount++;
+                } else {
+                    console.warn('카테고리 데이터 로딩 실패');
+                }
+                
+                // 결과에 따른 상태 업데이트
+                if (successCount === totalCount) {
+                    this.updateDataStatus('success', `데이터 로딩 완료 (${this.products.length}개 제품, ${this.categories.length}개 카테고리)`);
+                } else if (successCount > 0) {
+                    this.updateDataStatus('warning', `일부 데이터 로딩 실패 (${successCount}/${totalCount})`);
+                } else {
+                    this.updateDataStatus('error', '모든 데이터 로딩 실패');
+                }
+            } else {
+                console.warn('Supabase 로딩 실패, 빈 배열 사용');
+                this.products = this.getEmptyProducts();
+                this.categories = this.getEmptyCategories();
+                this.updateDataStatus('error', 'Supabase 연결 실패 - 빈 데이터 사용');
+            }
+        } catch (error) {
+            console.error('데이터 로딩 중 오류:', error);
+            console.warn('빈 배열 사용');
+            this.products = this.getEmptyProducts();
+            this.categories = this.getEmptyCategories();
+            this.updateDataStatus('error', '데이터 로딩 오류 - 빈 데이터 사용');
+        }
+    }
+    
+    // Netlify 환경 검증
+    validateNetlifySetup() {
+        console.log('Netlify 환경 검증 시작...');
+        
+        // 이벤트 리스너가 제대로 설정되었는지 확인
+        const addProductForm = document.getElementById('addProductForm');
+        if (addProductForm) {
+            console.log('폼 이벤트 리스너 설정 확인됨');
+        } else {
+            console.error('폼을 찾을 수 없음');
+        }
+        
+        // 수정/삭제 버튼 이벤트 위임 확인
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('edit-btn') || 
+                e.target.classList.contains('delete-btn') ||
+                e.target.classList.contains('export-btn') ||
+                e.target.classList.contains('return-btn') ||
+                e.target.classList.contains('maintenance-btn')) {
+                console.log('버튼 클릭 이벤트 감지됨:', e.target.className);
+            }
+        });
+        
+        console.log('Netlify 환경 검증 완료');
     }
 
     // Event listeners setup
@@ -113,33 +495,48 @@ class DesktopToolManagement {
         }
 
         // Add event delegation for action buttons
-        document.addEventListener('click', (e) => {
-            const target = e.target;
-            
-            // Check if clicked element is an action button
-            if (target.matches('[data-action]')) {
-                const action = target.getAttribute('data-action');
-                const productId = parseInt(target.getAttribute('data-id'));
+        document.addEventListener('click', async (e) => {
+            try {
+                const target = e.target;
+                console.log('클릭된 요소:', target.className, target.getAttribute('data-action'));
                 
-                if (productId && !isNaN(productId)) {
-                    switch (action) {
-                        case 'edit':
-                            this.editProduct(productId);
-                            break;
-                        case 'delete':
-                            this.deleteProduct(productId);
-                            break;
-                        case 'export':
-                            this.changeProductStatus(productId, 'Exported');
-                            break;
-                        case 'return':
-                            this.changeProductStatus(productId, 'Available');
-                            break;
-                        case 'maintenance':
-                            this.changeProductStatus(productId, 'Under Maintenance');
-                            break;
+                // Check if clicked element is an action button
+                if (target.matches('[data-action]')) {
+                    const action = target.getAttribute('data-action');
+                    const productId = parseInt(target.getAttribute('data-id'));
+                    
+                    console.log('액션:', action, '제품 ID:', productId);
+                    
+                    if (productId && !isNaN(productId)) {
+                        switch (action) {
+                            case 'edit':
+                                console.log('수정 시작:', productId);
+                                await this.editProduct(productId);
+                                break;
+                            case 'delete':
+                                console.log('삭제 시작:', productId);
+                                await this.deleteProduct(productId);
+                                break;
+                            case 'export':
+                                console.log('반출 시작:', productId);
+                                await this.changeProductStatus(productId, 'Exported');
+                                break;
+                            case 'return':
+                                console.log('반납 시작:', productId);
+                                await this.changeProductStatus(productId, 'Available');
+                                break;
+                            case 'maintenance':
+                                console.log('정비 시작:', productId);
+                                await this.changeProductStatus(productId, 'Under Maintenance');
+                                break;
+                        }
+                    } else {
+                        console.error('유효하지 않은 제품 ID:', productId);
                     }
                 }
+            } catch (error) {
+                console.error('버튼 클릭 이벤트 처리 중 오류:', error);
+                this.showNotification('작업 처리 중 오류가 발생했습니다.', 'error');
             }
         });
     }
@@ -969,7 +1366,8 @@ class DesktopToolManagement {
                 serial_number: document.getElementById('productSerial').value || '',
                 purchase_date: document.getElementById('productPurchaseDate').value || null,
                 warranty_date: document.getElementById('productWarrantyDate').value || null,
-                asset_code: this.generateAssetCode(document.getElementById('productCategory').value)
+                asset_code: this.generateAssetCode(document.getElementById('productCategory').value),
+                barcode: this.generateBarcode() // 바코드 자동 생성
             };
 
             // 편집 모드인지 확인
@@ -998,25 +1396,29 @@ class DesktopToolManagement {
     // Add new product
     async addProduct(productData) {
         try {
-            // 새 제품 ID 생성
-            const newId = Math.max(...this.products.map(p => p.id)) + 1;
-            
-            // 바코드 생성
-            const barcode = `P${newId.toString().padStart(3, '0')}`;
-            
-            // 새 제품 객체 생성
+            // 새 제품 객체 생성 (바코드와 asset_code는 이미 productData에 포함됨)
             const newProduct = {
                 ...productData,
-                id: newId,
-                barcode: barcode,
                 created_at: new Date().toISOString()
             };
             
-            // 로컬 배열에 추가
-            this.products.push(newProduct);
+            // Supabase에 제품 추가
+            const addedProduct = await this.addProductToDatabase(newProduct);
             
-            this.showNotification('제품이 성공적으로 추가되었습니다.', 'success');
-            return true;
+            if (addedProduct) {
+                // 데이터베이스에서 반환된 ID 사용
+                newProduct.id = addedProduct.id;
+                this.products.push(newProduct);
+                this.showNotification('제품이 성공적으로 추가되었습니다.', 'success');
+                return true;
+            } else {
+                // 데이터베이스 추가 실패 시 로컬에만 추가
+                const newId = Math.max(...this.products.map(p => p.id), 0) + 1;
+                newProduct.id = newId;
+                this.products.push(newProduct);
+                this.showNotification('제품이 로컬에만 추가되었습니다. (데이터베이스 연결 실패)', 'warning');
+                return false;
+            }
         } catch (error) {
             console.error('제품 추가 실패:', error);
             this.showNotification('제품 추가 중 오류가 발생했습니다.', 'error');
@@ -1037,14 +1439,51 @@ class DesktopToolManagement {
             '기타': 'E'
         };
         
-        const prefix = categoryPrefixes[category] || 'X';
+        const prefix = categoryPrefixes[category];
+        if (!prefix) return null;
         
-        // 해당 카테고리의 기존 제품 수를 세어서 다음 번호 생성
+        // 해당 카테고리의 제품 수를 세어서 다음 번호 생성
         const categoryProducts = this.products.filter(p => p.category === category);
         const nextNumber = categoryProducts.length + 1;
         
-        // 3자리 숫자로 패딩 (예: A001, A002, ..., A999)
         return `${prefix}${nextNumber.toString().padStart(3, '0')}`;
+    }
+
+    // Generate unique barcode
+    generateBarcode() {
+        // 현재 제품 수를 기반으로 다음 바코드 번호 생성
+        const nextNumber = this.products.length + 1;
+        return `P${nextNumber.toString().padStart(3, '0')}`;
+    }
+
+    // Generate unique asset code for batch (with offset)
+    generateAssetCodeForBatch(category, offset = 0) {
+        if (!category) return null;
+        
+        // 카테고리별 접두사 매핑
+        const categoryPrefixes = {
+            '전동공구': 'A',
+            '수동공구': 'B', 
+            '측정도구': 'C',
+            '안전장비': 'D',
+            '기타': 'E'
+        };
+        
+        const prefix = categoryPrefixes[category];
+        if (!prefix) return null;
+        
+        // 해당 카테고리의 제품 수 + 오프셋을 기반으로 다음 번호 생성
+        const categoryProducts = this.products.filter(p => p.category === category);
+        const nextNumber = categoryProducts.length + 1 + offset;
+        
+        return `${prefix}${nextNumber.toString().padStart(3, '0')}`;
+    }
+
+    // Generate unique barcode for batch (with offset)
+    generateBarcodeForBatch(offset = 0) {
+        // 현재 제품 수 + 오프셋을 기반으로 다음 바코드 번호 생성
+        const nextNumber = this.products.length + 1 + offset;
+        return `P${nextNumber.toString().padStart(3, '0')}`;
     }
 
     // Change product status
@@ -1053,35 +1492,66 @@ class DesktopToolManagement {
         if (!product) return;
 
         try {
-            // 제품 상태 업데이트
-            product.status = newStatus;
-            product.last_modified = new Date().toISOString();
-
+            let additionalData = {};
+            
             if (newStatus === 'Exported') {
                 // 반출 정보 추가
                 const exportPurpose = prompt('반출 목적을 입력해주세요:');
                 const exportedBy = prompt('반출자 이름을 입력해주세요:');
                 
                 if (exportPurpose && exportedBy) {
-                    product.exported_by = exportedBy;
-                    product.exported_date = new Date().toISOString();
-                    product.export_purpose = exportPurpose;
+                    additionalData = {
+                        exported_by: exportedBy,
+                        export_purpose: exportPurpose
+                    };
                 } else {
                     this.showNotification('반출 목적과 반출자 이름을 모두 입력해주세요.', 'warning');
                     return;
                 }
+            }
+
+            // Supabase에서 제품 상태 변경
+            const updatedProduct = await this.changeProductStatusInDatabase(productId, newStatus, additionalData);
+            
+            if (updatedProduct) {
+                // 데이터베이스 업데이트 성공 시 로컬 배열도 업데이트
+                product.status = newStatus;
+                product.last_modified = new Date().toISOString();
+                
+                if (newStatus === 'Exported') {
+                    product.exported_by = additionalData.exported_by;
+                    product.exported_date = new Date().toISOString();
+                    product.export_purpose = additionalData.export_purpose;
+                } else {
+                    // 반출 상태가 아닌 경우 반출 정보 초기화
+                    product.exported_by = null;
+                    product.exported_date = null;
+                    product.export_purpose = null;
+                }
+                
+                this.showNotification(`제품 상태가 '${newStatus}'로 변경되었습니다.`, 'success');
             } else {
-                // 반출 상태가 아닌 경우 반출 정보 초기화
-                product.exported_by = null;
-                product.exported_date = null;
-                product.export_purpose = null;
+                // 데이터베이스 업데이트 실패 시 로컬에만 업데이트
+                product.status = newStatus;
+                product.last_modified = new Date().toISOString();
+                
+                if (newStatus === 'Exported') {
+                    product.exported_by = additionalData.exported_by;
+                    product.exported_date = new Date().toISOString();
+                    product.export_purpose = additionalData.export_purpose;
+                } else {
+                    product.exported_by = null;
+                    product.exported_date = null;
+                    product.export_purpose = null;
+                }
+                
+                this.showNotification(`제품 상태가 로컬에서만 '${newStatus}'로 변경되었습니다. (데이터베이스 연결 실패)`, 'warning');
             }
 
             // UI 새로고침
             this.renderProducts();
             this.updateStats();
             this.renderExportStatus();
-            this.showNotification(`제품 상태가 '${newStatus}'로 변경되었습니다.`, 'success');
         } catch (error) {
             console.error('제품 상태 변경 실패:', error);
             this.showNotification('제품 상태 변경 중 오류가 발생했습니다.', 'error');
@@ -1092,14 +1562,23 @@ class DesktopToolManagement {
     async deleteProduct(productId) {
         try {
             if (confirm('정말로 이 제품을 삭제하시겠습니까?')) {
-                // 로컬 배열에서 제거
-                this.products = this.products.filter(p => p.id !== productId);
+                // Supabase에서 제품 삭제
+                const deleteSuccess = await this.deleteProductFromDatabase(productId);
+                
+                if (deleteSuccess) {
+                    // 데이터베이스 삭제 성공 시 로컬 배열에서도 제거
+                    this.products = this.products.filter(p => p.id !== productId);
+                    this.showNotification('제품이 성공적으로 삭제되었습니다.', 'success');
+                } else {
+                    // 데이터베이스 삭제 실패 시 로컬에서만 제거
+                    this.products = this.products.filter(p => p.id !== productId);
+                    this.showNotification('제품이 로컬에서만 삭제되었습니다. (데이터베이스 연결 실패)', 'warning');
+                }
                 
                 // UI 새로고침
                 this.renderProducts();
                 this.updateStats();
                 this.renderExportStatus();
-                this.showNotification('제품이 성공적으로 삭제되었습니다.', 'success');
                 return true;
             }
             return false;
@@ -1149,31 +1628,41 @@ class DesktopToolManagement {
         }
     }
 
-    // Update product
+    // Update existing product
     async updateProduct(productData) {
         try {
-            const productIndex = this.products.findIndex(p => p.id === this.editingProductId);
-            if (productIndex === -1) {
+            // 기존 제품 정보 가져오기
+            const existingProduct = this.products.find(p => p.id === this.editingProductId);
+            if (!existingProduct) {
                 this.showNotification('수정할 제품을 찾을 수 없습니다.', 'error');
                 return false;
             }
 
-            // 제품 데이터 업데이트
-            this.products[productIndex] = { ...this.products[productIndex], ...productData };
+            // 업데이트할 데이터 준비 (바코드와 asset_code는 기존 값 유지)
+            const updateData = {
+                ...productData,
+                barcode: existingProduct.barcode, // 기존 바코드 유지
+                asset_code: existingProduct.asset_code, // 기존 asset_code 유지
+                updated_at: new Date().toISOString()
+            };
+
+            // Supabase에서 제품 업데이트
+            const updatedProduct = await this.updateProductInDatabase(this.editingProductId, updateData);
             
-            // UI 새로고침
-            this.renderProducts();
-            this.updateStats();
-            this.renderExportStatus();
-            
-            this.showNotification('제품이 성공적으로 수정되었습니다.', 'success');
-            
-            // 편집 모드 종료
-            this.editingProductId = null;
-            
-            // 폼 초기화 및 버튼 텍스트 원래대로
-            this.resetForm();
-            return true;
+            if (updatedProduct) {
+                // 로컬 배열 업데이트
+                const index = this.products.findIndex(p => p.id === this.editingProductId);
+                if (index !== -1) {
+                    this.products[index] = { ...this.products[index], ...updateData };
+                }
+                
+                this.showNotification('제품이 성공적으로 수정되었습니다.', 'success');
+                this.editingProductId = null; // 편집 모드 해제
+                return true;
+            } else {
+                this.showNotification('제품 수정에 실패했습니다.', 'error');
+                return false;
+            }
         } catch (error) {
             console.error('제품 수정 실패:', error);
             this.showNotification('제품 수정 중 오류가 발생했습니다.', 'error');
@@ -1455,7 +1944,7 @@ class DesktopToolManagement {
         if (isExpired) {
             className += ' warranty-expired';
         } else if (daysUntilExpiry <= 30) {
-            className += ' warranty-expired'; // 30일 이내 만료
+            className += ' warranty-expired';
         }
         
         const formattedDate = warranty.toLocaleDateString('ko-KR');
@@ -1682,9 +2171,435 @@ class DesktopToolManagement {
         }
     }
 
+    // Initialize Handsontable for batch editing
+    initializeBatchTable() {
+        const container = document.getElementById('batchTableContainer');
+        if (!container) return;
 
-    
+        // 초기 데이터 (빈 행 10개로 시작)
+        this.batchData = Array(10).fill().map(() => ({
+            name: '',
+            maker: '',
+            model: '',
+            specification: '',
+            category: '',
+            description: '',
+            serial_number: '',
+            purchase_date: '',
+            warranty_date: ''
+        }));
 
+        // Handsontable 생성
+        this.batchTable = new Handsontable(container, {
+            data: this.batchData,
+            colHeaders: [
+                '제품명 *', '메이커 *', '모델명 *', '규격', '카테고리 *', 
+                '설명', '시리얼번호', '구매일', '워런티'
+            ],
+            columns: [
+                { data: 'name', type: 'text', allowInvalid: false },
+                { data: 'maker', type: 'text', allowInvalid: false },
+                { data: 'model', type: 'text', allowInvalid: false },
+                { data: 'specification', type: 'text' },
+                { 
+                    data: 'category', 
+                    type: 'dropdown', 
+                    source: this.categories.map(c => c.name),
+                    allowInvalid: false 
+                },
+                { data: 'description', type: 'text' },
+                { data: 'serial_number', type: 'text' },
+                { data: 'purchase_date', type: 'text', placeholder: 'YYYY-MM-DD 또는 2024/01/01' },
+                { data: 'warranty_date', type: 'text', placeholder: 'YYYY-MM-DD 또는 2024/01/01' }
+            ],
+            width: '100%',
+            height: 'auto',
+            rowHeaders: true,
+            colWidths: [150, 120, 120, 100, 120, 150, 120, 100, 100],
+            stretchH: 'all',
+            licenseKey: 'non-commercial-and-evaluation',
+            contextMenu: true,
+            manualRowResize: true,
+            manualColumnResize: true,
+            filters: true,
+            dropdownMenu: true,
+            afterChange: (changes, source) => {
+                if (source === 'loadData') return;
+                this.validateBatchData();
+            },
+            afterCreateRow: null, // 자동 행 생성 비활성화
+            afterRemoveRow: null  // 자동 행 삭제 비활성화
+        });
+
+        // 테이블 스타일링
+        container.style.border = '2px solid #e9ecef';
+        container.style.borderRadius = '8px';
+        container.style.overflow = 'hidden';
+        
+        // 행 카운터 초기화
+        this.updateRowCounter();
+    }
+
+    // Add new row to batch table
+    addNewRow() {
+        if (this.batchTable) {
+            this.batchTable.alter('insert_row');
+        }
+    }
+
+    // Clear batch table
+    clearBatchTable() {
+        if (confirm('테이블의 모든 데이터를 지우시겠습니까?')) {
+            this.batchData = Array(10).fill().map(() => ({
+                name: '', maker: '', model: '', specification: '', category: '',
+                description: '', serial_number: '', 
+                purchase_date: '', warranty_date: ''
+            }));
+            if (this.batchTable) {
+                this.batchTable.loadData(this.batchData);
+                this.updateRowCounter(); // 행 카운터 업데이트
+            }
+        }
+    }
+
+    // Import data from Excel
+    importFromExcel() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.xlsx,.xls';
+        input.onchange = (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                this.readExcelFile(file);
+            }
+        };
+        input.click();
+    }
+
+    // Read Excel file
+    async readExcelFile(file) {
+        try {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+                
+                if (jsonData.length > 1) {
+                    const headers = jsonData[0];
+                    const rows = jsonData.slice(1);
+                    
+                    // 데이터 변환
+                    const convertedData = rows.map(row => {
+                        const item = {};
+                        headers.forEach((header, index) => {
+                            if (row[index] !== undefined) {
+                                const key = this.mapExcelHeaderToField(header);
+                                if (key) {
+                                    item[key] = row[index];
+                                }
+                            }
+                        });
+                        return item;
+                    });
+                    
+                    // 필수 필드 검증
+                    const validData = convertedData.filter(item => 
+                        item.name && item.maker && item.model && item.category
+                    );
+                    
+                    if (validData.length > 0) {
+                        this.batchData = validData;
+                        if (this.batchTable) {
+                            this.batchTable.loadData(this.batchData);
+                        }
+                        this.showNotification(`${validData.length}개 제품 데이터를 가져왔습니다.`, 'success');
+                    } else {
+                        this.showNotification('유효한 제품 데이터를 찾을 수 없습니다.', 'error');
+                    }
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        } catch (error) {
+            console.error('Excel 파일 읽기 오류:', error);
+            this.showNotification('Excel 파일 읽기에 실패했습니다.', 'error');
+        }
+    }
+
+    // Map Excel header to field name
+    mapExcelHeaderToField(header) {
+        const mapping = {
+            '제품명': 'name',
+            '메이커': 'maker',
+            '모델명': 'model',
+            '규격': 'specification',
+            '카테고리': 'category',
+            '상태': 'status',
+            '설명': 'description',
+            '시리얼번호': 'serial_number',
+            '구매일': 'purchase_date',
+            '워런티': 'warranty_date'
+        };
+        return mapping[header] || null;
+    }
+
+    // Validate batch data
+    validateBatchData() {
+        if (!this.batchTable) return false;
+        
+        const data = this.batchTable.getData();
+        let hasErrors = false;
+        
+        data.forEach((row, index) => {
+            if (row[0] || row[1] || row[2] || row[4]) { // 제품명, 메이커, 모델명, 카테고리 중 하나라도 있으면 검증
+                if (!row[0] || !row[1] || !row[2] || !row[4]) {
+                    hasErrors = true;
+                    this.batchTable.setCellMeta(index, 0, 'className', 'htInvalid');
+                } else {
+                    this.batchTable.setCellMeta(index, 0, 'className', 'htValid');
+                }
+            }
+        });
+        
+        return !hasErrors;
+    }
+
+    // Save batch products
+    async saveBatchProducts() {
+        if (!this.batchTable) return;
+        
+        const data = this.batchTable.getData();
+        const productsToSave = [];
+        
+        // 데이터 검증 및 변환
+        data.forEach((row, index) => {
+            if (row[0] && row[1] && row[2] && row[4]) { // 제품명, 메이커, 모델명, 카테고리 확인
+                const product = {
+                    name: row[0],
+                    maker: row[1],
+                    model: row[2],
+                    specification: row[3] || '',
+                    category: row[4],
+                    status: 'Available', // 자동으로 Available 설정
+                    description: row[5] || '',
+                    serial_number: row[6] || '',
+                    purchase_date: this.parseDate(row[7]), // 날짜 파싱
+                    warranty_date: this.parseDate(row[8]), // 날짜 파싱
+                    asset_code: this.generateAssetCodeForBatch(row[4], index), // 각 행마다 고유한 자산코드 생성
+                    barcode: this.generateBarcodeForBatch(index) // 각 행마다 고유한 바코드 생성
+                };
+                productsToSave.push(product);
+            }
+        });
+        
+        if (productsToSave.length === 0) {
+            this.showNotification('저장할 제품이 없습니다.', 'warning');
+            return;
+        }
+        
+        if (!this.validateBatchData()) {
+            this.showNotification('필수 필드를 모두 입력해주세요.', 'error');
+            return false;
+        }
+        
+        try {
+            this.isProcessing = true;
+            let successCount = 0;
+            
+            // 제품들을 하나씩 저장
+            for (const product of productsToSave) {
+                const savedProduct = await this.addProductToDatabase(product);
+                if (savedProduct) {
+                    successCount++;
+                    this.products.push(savedProduct);
+                }
+            }
+            
+            if (successCount > 0) {
+                this.showNotification(`${successCount}개 제품이 성공적으로 저장되었습니다.`, 'success');
+                this.renderProducts();
+                this.updateStats();
+                
+                // 테이블 초기화
+                this.batchData = Array(10).fill().map(() => ({
+                    name: '', maker: '', model: '', specification: '', category: '',
+                    description: '', serial_number: '', 
+                    purchase_date: '', warranty_date: ''
+                }));
+                this.batchTable.loadData(this.batchData);
+                this.updateRowCounter(); // 행 카운터 업데이트
+            }
+        } catch (error) {
+            console.error('배치 저장 오류:', error);
+            this.showNotification('제품 저장 중 오류가 발생했습니다.', 'error');
+        } finally {
+            this.isProcessing = false;
+        }
+    }
+
+    // Open batch modal
+    openBatchModal() {
+        const modal = document.getElementById('batchModal');
+        if (modal) {
+            modal.style.display = 'flex';
+            // 모달이 열릴 때 테이블 초기화
+            if (this.batchTable) {
+                this.batchTable.render();
+            }
+        }
+    }
+
+    // Close batch modal
+    closeBatchModal() {
+        const modal = document.getElementById('batchModal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+    }
+
+    // Add new row to batch table
+    addNewRowToBatchTable() {
+        if (this.batchTable) {
+            // 새 빈 행 5개씩 추가 (더 효율적)
+            for (let i = 0; i < 5; i++) {
+                const newRow = {
+                    name: '', maker: '', model: '', specification: '', category: '',
+                    description: '', serial_number: '', 
+                    purchase_date: '', warranty_date: ''
+                };
+                this.batchData.push(newRow);
+            }
+            this.batchTable.loadData(this.batchData);
+            this.updateRowCounter();
+        }
+    }
+
+    // Add single row to batch table
+    addSingleRowToBatchTable() {
+        if (this.batchTable) {
+            // 새 빈 행 1개 추가
+            const newRow = {
+                name: '', maker: '', model: '', specification: '', category: '',
+                description: '', serial_number: '', 
+                purchase_date: '', warranty_date: ''
+            };
+            this.batchData.push(newRow);
+            this.batchTable.loadData(this.batchData);
+        }
+    }
+
+    // Import from Excel to batch table
+    importFromExcelToBatchTable() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.xlsx,.xls';
+        input.onchange = (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                this.readExcelFile(file);
+            }
+        };
+        input.click();
+    }
+
+    // Download batch template
+    downloadBatchTemplate() {
+        const templateData = [
+            ['제품명', '메이커', '모델명', '규격', '카테고리', '설명', '시리얼번호', '구매일', '워런티'],
+            ['예시 제품', '예시 메이커', '예시 모델', '예시 규격', '전동공구', '예시 설명', 'SN001', '2024-01-01', '2027-01-01']
+        ];
+
+        const ws = XLSX.utils.aoa_to_sheet(templateData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, '제품 등록 템플릿');
+        
+        XLSX.writeFile(wb, '제품_등록_템플릿.xlsx');
+    }
+
+    // Parse date from various formats
+    parseDate(dateString) {
+        if (!dateString || typeof dateString !== 'string') return null;
+        
+        // 공백 제거
+        dateString = dateString.trim();
+        if (!dateString) return null;
+        
+        // 이미 ISO 형식인 경우
+        if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+            return dateString;
+        }
+        
+        // 다양한 날짜 형식 지원
+        const dateFormats = [
+            // YYYY/MM/DD
+            /^(\d{4})\/(\d{1,2})\/(\d{1,2})$/,
+            // YYYY-MM-DD
+            /^(\d{4})-(\d{1,2})-(\d{1,2})$/,
+            // YYYY.MM.DD
+            /^(\d{4})\.(\d{1,2})\.(\d{1,2})$/,
+            // MM/DD/YYYY (미국 형식)
+            /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/,
+            // DD/MM/YYYY (유럽 형식)
+            /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/,
+            // YYYY년 MM월 DD일 (한국 형식)
+            /^(\d{4})년\s*(\d{1,2})월\s*(\d{1,2})일$/,
+            // YYYYMMDD (숫자 형식)
+            /^(\d{4})(\d{2})(\d{2})$/
+        ];
+        
+        for (let i = 0; i < dateFormats.length; i++) {
+            const match = dateString.match(dateFormats[i]);
+            if (match) {
+                let year, month, day;
+                
+                if (i === 3) {
+                    // MM/DD/YYYY 형식
+                    month = parseInt(match[1]);
+                    day = parseInt(match[2]);
+                    year = parseInt(match[3]);
+                } else if (i === 4) {
+                    // DD/MM/YYYY 형식 (MM/DD/YYYY와 구분이 어려우므로 사용자가 명시해야 함)
+                    day = parseInt(match[1]);
+                    month = parseInt(match[2]);
+                    year = parseInt(match[3]);
+                } else if (i === 5) {
+                    // 한국어 형식
+                    year = parseInt(match[1]);
+                    month = parseInt(match[2]);
+                    day = parseInt(match[3]);
+                } else if (i === 6) {
+                    // YYYYMMDD 형식
+                    year = parseInt(match[1]);
+                    month = parseInt(match[2]);
+                    day = parseInt(match[3]);
+                } else {
+                    // YYYY/MM/DD, YYYY-MM-DD, YYYY.MM.DD 형식
+                    year = parseInt(match[1]);
+                    month = parseInt(match[2]);
+                    day = parseInt(match[3]);
+                }
+                
+                // 유효한 날짜인지 확인
+                if (year >= 1900 && year <= 2100 && month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+                    // ISO 형식으로 변환 (YYYY-MM-DD)
+                    return `${year.toString().padStart(4, '0')}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+                }
+            }
+        }
+        
+        // 파싱 실패 시 null 반환
+        console.warn('날짜 형식을 인식할 수 없습니다:', dateString);
+        return null;
+    }
+
+    // Update row counter display
+    updateRowCounter() {
+        const rowCounter = document.getElementById('rowCounter');
+        if (rowCounter && this.batchData) {
+            rowCounter.textContent = `총 ${this.batchData.length}행`;
+        }
+    }
 }
 
 // Global functions
@@ -1742,7 +2657,40 @@ function downloadExportStatusExcel() {
 
 // Initialize system when page loads
 document.addEventListener('DOMContentLoaded', () => {
-    window.desktopSystem = new DesktopToolManagement();
+    console.log('DOM 로딩 완료, 시스템 초기화 시작...');
+    
+    try {
+        window.desktopSystem = new DesktopToolManagement();
+        console.log('desktopSystem 객체 생성 완료');
+        
+        // Netlify 환경에서 추가 검증
+        if (window.location.hostname.includes('netlify.app') || 
+            window.location.hostname.includes('netlify.com')) {
+            console.log('Netlify 환경 감지됨');
+            
+            // 시스템이 제대로 초기화되었는지 확인
+            setTimeout(() => {
+                if (window.desktopSystem && window.desktopSystem.products) {
+                    console.log('Netlify 환경에서 시스템 초기화 성공');
+                    console.log('제품 수:', window.desktopSystem.products.length);
+                } else {
+                    console.error('Netlify 환경에서 시스템 초기화 실패');
+                }
+            }, 2000);
+        }
+    } catch (error) {
+        console.error('시스템 초기화 중 오류:', error);
+        
+        // 재시도 로직
+        setTimeout(() => {
+            try {
+                window.desktopSystem = new DesktopToolManagement();
+                console.log('재시도로 시스템 초기화 성공');
+            } catch (retryError) {
+                console.error('재시도 실패:', retryError);
+            }
+        }, 1000);
+    }
     
     // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {
@@ -1768,5 +2716,20 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     });
+});
+
+// Netlify 환경에서 페이지 로딩 완료 후 추가 검증
+window.addEventListener('load', () => {
+    console.log('페이지 완전 로딩 완료');
+    
+    if (window.desktopSystem) {
+        console.log('desktopSystem 객체 상태 확인:', {
+            products: window.desktopSystem.products?.length || 0,
+            categories: window.desktopSystem.categories?.length || 0,
+            isProcessing: window.desktopSystem.isProcessing
+        });
+    } else {
+        console.error('desktopSystem 객체가 존재하지 않음');
+    }
 });
 

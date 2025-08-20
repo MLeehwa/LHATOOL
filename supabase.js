@@ -6,7 +6,12 @@ const supabaseUrl = 'https://smtqsqokgfxlmyldeeks.supabase.co';
 const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNtdHFzcW9rZ2Z4bG15bGRlZWtzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY3Mjg1ODksImV4cCI6MjA2MjMwNDU4OX0.aVQS7Y4aRr19wnoeMNjP-iYVMFxGwMc3AMNKgEwIVuM';
 
 // Supabase 클라이언트 생성 (브라우저용)
-const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
+const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey, {
+  headers: {
+    'Accept': 'application/json',
+    'Content-Type': 'application/json'
+  }
+});
 
 // 공구 관리 시스템 데이터베이스 함수들
 const toolsDB = {
@@ -86,17 +91,21 @@ const toolsDB = {
 
     // 바코드로 제품 조회
     async getByBarcode(barcode) {
+      if (!barcode || barcode.trim() === '') {
+        return null;
+      }
+      
       const { data, error } = await supabase
         .from('tools_products')
         .select('*')
-        .eq('barcode', barcode)
-        .single();
+        .eq('barcode', barcode.trim())
+        .maybeSingle(); // single() 대신 maybeSingle() 사용
       
       if (error) {
         console.error('Error fetching product by barcode:', error);
         return null;
       }
-      return data;
+      return data; // null이 반환될 수 있음 (바코드가 존재하지 않는 경우)
     }
   },
 

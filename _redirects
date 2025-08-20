@@ -1,6 +1,15 @@
-# Netlify 리다이렉트 설정
-# index.html을 기본 페이지로 설정 (로그인 페이지)
-/ /index.html 200
+# JavaScript 파일 캐싱 방지
+/*.js
+  Cache-Control: no-cache, no-store, must-revalidate
+  X-Content-Type-Options: nosniff
 
-# SPA 라우팅을 위한 fallback
-/* /index.html 200
+# HTML 파일 캐싱 방지
+/*.html
+  Cache-Control: no-cache, no-store, must-revalidate
+  X-Content-Type-Options: nosniff
+
+# SPA 라우팅
+/*    /index.html   200
+
+# 메인 페이지
+/     /index.html   200
