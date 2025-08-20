@@ -749,6 +749,8 @@ class PDAToolManagement {
         if (this.isProcessing) return;
         
         const scanValue = document.getElementById('exportScanInput').value.trim();
+        console.log('📱 scanForExport 호출됨, scanValue:', scanValue);
+        
         if (!scanValue) {
             this.showNotification('바코드를 스캔하거나 제품 ID를 입력해주세요.', 'warning');
             return;
@@ -757,12 +759,26 @@ class PDAToolManagement {
         this.isProcessing = true;
         
         try {
+            console.log('🔍 제품 검색 시작...');
             const product = await this.findProduct(scanValue);
+            console.log('🔍 검색 결과 제품:', product);
+            
             if (product) {
+                console.log('✅ 제품 찾음, 상태 확인:', product.status);
+                
                 if (product.status === 'Available') {
+                    console.log('📦 장바구니에 추가 시도:', {
+                        scannedBarcode: scanValue,
+                        productBarcode: product.barcode,
+                        productId: product.id,
+                        productName: product.name
+                    });
+                    
                     // 제품을 장바구니에 추가
                     const added = this.addToCart('export', product);
                     if (added) {
+                        console.log('✅ 장바구니 추가 성공');
+                        
                         // 입력 필드 초기화 및 다음 스캔 준비
                         document.getElementById('exportScanInput').value = '';
                         document.getElementById('exportScanInput').focus();
@@ -772,15 +788,19 @@ class PDAToolManagement {
                         setTimeout(() => {
                             this.hideProductInfo('export');
                         }, 2000);
+                    } else {
+                        console.log('❌ 장바구니 추가 실패');
                     }
                 } else {
+                    console.log('⚠️ 제품 상태가 Available이 아님:', product.status);
                     this.showNotification(`제품 "${product.name}"은 현재 ${this.getStatusText(product.status)} 상태입니다.`, 'warning');
                 }
             } else {
+                console.log('❌ 제품을 찾을 수 없음:', scanValue);
                 this.showNotification(`제품을 찾을 수 없습니다: ${scanValue}`, 'error');
             }
         } catch (error) {
-            console.error('반출 스캔 오류:', error);
+            console.error('❌ 반출 스캔 오류:', error);
             this.showNotification('제품 검색 중 오류가 발생했습니다.', 'error');
         } finally {
             this.isProcessing = false;
@@ -832,28 +852,64 @@ class PDAToolManagement {
 
     // Find product by ID, serial number, or barcode (Supabase 연동)
     async findProduct(identifier) {
+        console.log('🔍 findProduct 호출됨, identifier:', identifier);
+        
         try {
-            // 바코드 형식 확인 (P로 시작하는 4자리: P + 3자리 숫자)
-            if (identifier.startsWith('P') && identifier.length === 4) {
-                const productId = parseInt(identifier.substring(1));
-                return await window.toolsDB.products.getById(productId);
-            }
-
-            // 바코드로 직접 검색
+            // 1. 바코드로 직접 검색 (최우선)
+            console.log('🔍 바코드로 직접 검색 시도:', identifier);
             const productByBarcode = await window.toolsDB.products.getByBarcode(identifier);
             if (productByBarcode) {
+                console.log('✅ 바코드로 찾은 제품:', productByBarcode);
                 return productByBarcode;
             }
 
-            // 모든 제품을 가져와서 검색 (성능 최적화 필요시 개선)
+            // 2. P 형식 바코드인 경우 ID로 검색 (백업)
+            if (identifier.startsWith('P') && identifier.length === 4) {
+                const productId = parseInt(identifier.substring(1));
+                console.log('📊 P 형식 바코드 감지, productId:', productId);
+                
+                const product = await window.toolsDB.products.getById(productId);
+                console.log('🔍 ID로 검색된 제품:', product);
+                
+                if (product) {
+                    console.log('✅ ID로 찾은 제품:', {
+                        id: product.id,
+                        barcode: product.barcode,
+                        name: product.name,
+                        expectedBarcode: identifier
+                    });
+                    
+                    // 바코드 일치 여부 확인
+                    if (product.barcode !== identifier) {
+                        console.warn('⚠️ 바코드 불일치! ID 기반 검색 결과:', {
+                            expected: identifier,
+                            actual: product.barcode,
+                            productId: product.id
+                        });
+                    }
+                }
+                
+                return product;
+            }
+
+            // 3. 전체 제품 목록에서 검색 (마지막 수단)
+            console.log('🔍 전체 제품 목록에서 검색 시도');
             const allProducts = await window.toolsDB.products.getAll();
-            return allProducts.find(p =>
+            console.log('📊 전체 제품 수:', allProducts.length);
+            
+            const foundProduct = allProducts.find(p =>
                 p.id.toString() === identifier ||
                 p.serial_number === identifier ||
                 p.name.toLowerCase().includes(identifier.toLowerCase())
             );
+            
+            if (foundProduct) {
+                console.log('✅ 전체 검색으로 찾은 제품:', foundProduct);
+            }
+            
+            return foundProduct;
         } catch (error) {
-            console.error('제품 검색 오류:', error);
+            console.error('❌ 제품 검색 오류:', error);
             throw error;
         }
     }
