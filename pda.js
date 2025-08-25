@@ -853,9 +853,10 @@ class PDAToolManagement {
     // Find product by ID, serial number, or barcode (Supabase 연동)
     async findProduct(identifier) {
         console.log('🔍 findProduct 호출됨, identifier:', identifier);
+        this.hideProductInfo(mode); // 기존 제품 정보 숨기기
         
         try {
-            // 1. 바코드로 직접 검색 (최우선)
+            // 바코드로만 직접 검색 (ID 기반 검색 제거)
             console.log('🔍 바코드로 직접 검색 시도:', identifier);
             const productByBarcode = await window.toolsDB.products.getByBarcode(identifier);
             if (productByBarcode) {
@@ -863,36 +864,7 @@ class PDAToolManagement {
                 return productByBarcode;
             }
 
-            // 2. P 형식 바코드인 경우 ID로 검색 (백업)
-            if (identifier.startsWith('P') && identifier.length === 4) {
-                const productId = parseInt(identifier.substring(1));
-                console.log('📊 P 형식 바코드 감지, productId:', productId);
-                
-                const product = await window.toolsDB.products.getById(productId);
-                console.log('🔍 ID로 검색된 제품:', product);
-                
-                if (product) {
-                    console.log('✅ ID로 찾은 제품:', {
-                        id: product.id,
-                        barcode: product.barcode,
-                        name: product.name,
-                        expectedBarcode: identifier
-                    });
-                    
-                    // 바코드 일치 여부 확인
-                    if (product.barcode !== identifier) {
-                        console.warn('⚠️ 바코드 불일치! ID 기반 검색 결과:', {
-                            expected: identifier,
-                            actual: product.barcode,
-                            productId: product.id
-                        });
-                    }
-                }
-                
-                return product;
-            }
-
-            // 3. 전체 제품 목록에서 검색 (마지막 수단)
+            // 바코드로 찾지 못한 경우 전체 제품 목록에서 검색 (마지막 수단)
             console.log('🔍 전체 제품 목록에서 검색 시도');
             const allProducts = await window.toolsDB.products.getAll();
             console.log('📊 전체 제품 수:', allProducts.length);

@@ -48,6 +48,7 @@ class DesktopToolManagement {
                     serial_number: product.serial_number || '',
                     purchase_date: product.purchase_date || '',
                     barcode: product.barcode || '',
+                    asset_code: product.asset_code || '',
                     exported_by: product.exported_by || '',
                     exported_date: product.exported_date || '',
                     export_purpose: product.export_purpose || '',
@@ -954,13 +955,19 @@ class DesktopToolManagement {
             return;
         }
 
-        // Create filtered export status table
-        const exportTable = this.createFilteredExportStatusTable(filteredProducts);
-        container.appendChild(exportTable);
+        // Create filtered export status table with latest history
+        this.createFilteredExportStatusTable(filteredProducts).then(exportTable => {
+            container.appendChild(exportTable);
+        }).catch(error => {
+            console.error('Filtered export status table 생성 중 오류:', error);
+            // 오류 발생 시 기본 테이블 생성
+            const fallbackTable = this.createBasicExportStatusTable(filteredProducts);
+            container.appendChild(fallbackTable);
+        });
     }
 
     // Create filtered export status table
-    createFilteredExportStatusTable(filteredProducts) {
+    async createFilteredExportStatusTable(filteredProducts) {
         const table = document.createElement('table');
         table.className = 'products-table export-status-table';
         const thead = document.createElement('thead');
@@ -987,10 +994,13 @@ class DesktopToolManagement {
         `;
         table.appendChild(thead);
         const tbody = document.createElement('tbody');
-        filteredProducts.forEach(product => {
-            const row = this.createExportStatusRow(product);
+        
+        // 각 제품의 최신 반출 이력을 가져와서 행 생성
+        for (const product of filteredProducts) {
+            const row = await this.createExportStatusRowWithLatestHistory(product);
             tbody.appendChild(row);
-        });
+        }
+        
         table.appendChild(tbody);
         return table;
     }
@@ -1025,13 +1035,43 @@ class DesktopToolManagement {
             return;
         }
 
-        // Create export status table
-        const exportTable = this.createExportStatusTable();
-        container.appendChild(exportTable);
+        // 제품을 상태별로 정렬: 현재 반출 중인 제품을 최우선으로 표시
+        const sortedProducts = [...this.products].sort((a, b) => {
+            // 1순위: 현재 반출 중인 제품 (Exported)
+            if (a.status === 'Exported' && b.status !== 'Exported') return -1;
+            if (a.status !== 'Exported' && b.status === 'Exported') return 1;
+            
+            // 2순위: 사용 가능한 제품 (Available)
+            if (a.status === 'Available' && b.status !== 'Available') return -1;
+            if (a.status !== 'Available' && b.status === 'Available') return 1;
+            
+            // 3순위: 정비 중인 제품 (Under Maintenance)
+            if (a.status === 'Under Maintenance' && b.status !== 'Under Maintenance') return -1;
+            if (a.status !== 'Under Maintenance' && b.status === 'Under Maintenance') return 1;
+            
+            // 4순위: 폐기된 제품 (Retired)
+            if (a.status === 'Retired' && b.status !== 'Retired') return -1;
+            if (a.status !== 'Retired' && b.status === 'Retired') return 1;
+            
+            // 같은 상태 내에서는 최근 등록된 제품을 먼저 표시
+            const aDate = new Date(a.created_at || a.added_date || 0);
+            const bDate = new Date(b.created_at || b.added_date || 0);
+            return bDate - aDate;
+        });
+
+        // 각 제품의 최신 반출 이력을 가져와서 테이블 생성
+        this.createExportStatusTableWithLatestHistory(sortedProducts).then(exportTable => {
+            container.appendChild(exportTable);
+        }).catch(error => {
+            console.error('Export status table 생성 중 오류:', error);
+            // 오류 발생 시 기본 테이블 생성
+            const fallbackTable = this.createBasicExportStatusTable(sortedProducts);
+            container.appendChild(fallbackTable);
+        });
     }
 
-    // Create export status table
-    createExportStatusTable() {
+    // Create export status table with latest export history
+    async createExportStatusTableWithLatestHistory(sortedProducts) {
         const table = document.createElement('table');
         table.className = 'products-table export-status-table';
         const thead = document.createElement('thead');
@@ -1057,17 +1097,21 @@ class DesktopToolManagement {
             </tr>
         `;
         table.appendChild(thead);
+        
         const tbody = document.createElement('tbody');
-        this.products.forEach(product => {
-            const row = this.createExportStatusRow(product);
+        
+        // 각 제품의 최신 반출 이력을 가져와서 행 생성
+        for (const product of sortedProducts) {
+            const row = await this.createExportStatusRowWithLatestHistory(product);
             tbody.appendChild(row);
-        });
+        }
+        
         table.appendChild(tbody);
         return table;
     }
 
-    // Create export status row
-    createExportStatusRow(product) {
+    // Create export status row with latest export history
+    async createExportStatusRowWithLatestHistory(product) {
         const row = document.createElement('tr');
         
         let exportUser = '-';
@@ -1075,22 +1119,47 @@ class DesktopToolManagement {
         let exportPurpose = '-';
         let daysInfo = '-';
         
-        if (product.status === 'Exported' && product.exported_date) {
-            const exportDateObj = new Date(product.exported_date);
-            const now = new Date();
-            const diffTime = Math.abs(now - exportDateObj);
-            const daysDiff = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            
-            exportUser = product.exported_by || '지정되지 않음';
-            exportDate = exportDateObj.toLocaleDateString('ko-KR');
-            exportPurpose = product.export_purpose || '지정되지 않음';
-            
-            if (daysDiff > 30) {
-                daysInfo = `<span style="color: #dc3545; font-weight: 600;">${daysDiff}일 (장기)</span>`;
-            } else if (daysDiff > 7) {
-                daysInfo = `<span style="color: #ffc107; font-weight: 600;">${daysDiff}일 (연체)</span>`;
-            } else {
-                daysInfo = `<span style="color: #28a745; font-weight: 600;">${daysDiff}일</span>`;
+        // 현재 반출 중인 제품의 경우 최신 반출 이력에서 정보 가져오기
+        if (product.status === 'Exported') {
+            try {
+                // Supabase에서 해당 제품의 최신 반출 이력 조회
+                const exportHistory = await window.toolsDB.exportHistory.getByProductId(product.id);
+                if (exportHistory && exportHistory.length > 0) {
+                    // export_date 기준으로 정렬하여 최신 기록 가져오기
+                    const sortedHistory = exportHistory.sort((a, b) => {
+                        const dateA = new Date(a.export_date || 0);
+                        const dateB = new Date(b.export_date || 0);
+                        return dateB - dateA; // 최신 날짜가 먼저 오도록 내림차순
+                    });
+                    
+                    const latestExport = sortedHistory[0]; // 가장 최근 반출 기록
+                    
+                    if (latestExport) {
+                        exportUser = latestExport.exported_by || '지정되지 않음';
+                        exportDate = latestExport.export_date ? new Date(latestExport.export_date).toLocaleDateString('ko-KR') : '-';
+                        exportPurpose = latestExport.export_purpose || '지정되지 않음';
+                        
+                        // 반출 기간 계산
+                        const exportDateObj = new Date(latestExport.export_date);
+                        const now = new Date();
+                        const diffTime = Math.abs(now - exportDateObj);
+                        const daysDiff = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                        
+                        if (daysDiff > 30) {
+                            daysInfo = `<span style="color: #dc3545; font-weight: 600;">${daysDiff}일 (장기)</span>`;
+                        } else if (daysDiff > 7) {
+                            daysInfo = `<span style="color: #ffc107; font-weight: 600;">${daysDiff}일 (연체)</span>`;
+                        } else {
+                            daysInfo = `<span style="color: #28a745; font-weight: 600;">${daysDiff}일</span>`;
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error(`제품 ${product.id}의 반출 이력 조회 실패:`, error);
+                // 오류 발생 시 기본 정보 사용
+                exportUser = product.exported_by || '지정되지 않음';
+                exportDate = product.exported_date ? new Date(product.exported_date).toLocaleDateString('ko-KR') : '-';
+                exportPurpose = product.export_purpose || '지정되지 않음';
             }
         }
 
@@ -1121,6 +1190,83 @@ class DesktopToolManagement {
         return row;
     }
 
+    // Create basic export status table (fallback function)
+    createBasicExportStatusTable(sortedProducts) {
+        const table = document.createElement('table');
+        table.className = 'products-table export-status-table';
+        const thead = document.createElement('thead');
+        thead.innerHTML = `
+            <tr>
+                <th>제품명</th>
+                <th>메이커</th>
+                <th>모델명</th>
+                <th>규격</th>
+                <th>카테고리</th>
+                <th>현재 상태</th>
+                <th>자산코드</th>
+                <th>시리얼 번호</th>
+                <th>설명</th>
+                <th>구매일</th>
+                <th>워런티</th>
+                <th>등록일</th>
+                <th>반출자</th>
+                <th>반출일</th>
+                <th>반출 목적</th>
+                <th>반출 기간</th>
+                <th>작업</th>
+            </tr>
+        `;
+        table.appendChild(thead);
+        
+        const tbody = document.createElement('tbody');
+        
+        // 각 제품의 기본 정보로 행 생성
+        for (const product of sortedProducts) {
+            const row = this.createBasicExportStatusRow(product);
+            tbody.appendChild(row);
+        }
+        
+        table.appendChild(tbody);
+        return table;
+    }
+
+    // Create basic export status row (fallback function)
+    createBasicExportStatusRow(product) {
+        const row = document.createElement('tr');
+        
+        // 기본 정보만 표시 (반출 이력 조회 없이)
+        const exportUser = product.exported_by || '-';
+        const exportDate = product.exported_date ? new Date(product.exported_date).toLocaleDateString('ko-KR') : '-';
+        const exportPurpose = product.export_purpose || '-';
+        const daysInfo = '-';
+        
+        // 날짜 처리 - created_at 또는 added_date 사용
+        const registrationDate = product.created_at || product.added_date;
+        const displayDate = registrationDate ? new Date(registrationDate).toLocaleDateString('ko-KR') : '-';
+        
+        row.innerHTML = `
+            <td><strong style="cursor: pointer; color: #007bff;" onclick="showProductDetail(${product.id})" title="클릭하여 상세 정보 보기">${product.name}</strong></td>
+            <td>${product.maker || '-'}</td>
+            <td>${product.model || '-'}</td>
+            <td>${product.specification || '-'}</td>
+            <td>${product.category}</td>
+            <td><span class="status-badge status-${product.status.toLowerCase().replace(' ', '-')}">${this.getStatusText(product.status)}</span></td>
+            <td><span class="asset-code">${product.asset_code || '-'}</span></td>
+            <td>${product.serial_number || '-'}</td>
+            <td class="description-cell">${product.description || '-'}</td>
+            <td>${product.purchase_date ? new Date(product.purchase_date).toLocaleDateString('ko-KR') : '-'}</td>
+            <td>${this.formatWarrantyDate(product.warranty_date)}</td>
+            <td>${displayDate}</td>
+            <td>${exportUser}</td>
+            <td>${exportDate}</td>
+            <td class="purpose-cell">${exportPurpose}</td>
+            <td>${daysInfo}</td>
+            <td>${this.getExportStatusActionButtons(product)}</td>
+        `;
+        
+        return row;
+    }
+
     // Get export status action buttons
     getExportStatusActionButtons(product) {
         let buttons = '';
@@ -1137,8 +1283,6 @@ class DesktopToolManagement {
 
         return buttons;
     }
-
-
 
     // Load category options
     loadCategoryOptions() {
@@ -1809,7 +1953,16 @@ class DesktopToolManagement {
             container.innerHTML = '';
             
             if (exportHistory && exportHistory.length > 0) {
-                exportHistory.forEach((history, index) => {
+                // 반출 이력을 export_date 기준으로 정렬하여 최신 기록 확보
+                const sortedHistory = exportHistory.sort((a, b) => {
+                    const dateA = new Date(a.export_date || 0);
+                    const dateB = new Date(b.export_date || 0);
+                    return dateB - dateA; // 최신 날짜가 먼저 오도록 내림차순
+                });
+                
+                console.log('📅 백그라운드 정렬된 반출 이력:', sortedHistory);
+                
+                sortedHistory.forEach((history, index) => {
                     const historyItem = this.createExportHistoryItem(history, index === 0 && product.status === 'Exported');
                     container.appendChild(historyItem);
                 });
@@ -1863,26 +2016,72 @@ class DesktopToolManagement {
         try {
             // Supabase에서 반출 이력 조회
             const exportHistory = await window.toolsDB.exportHistory.getByProductId(product.id);
+            console.log('🔍 반출 이력 조회 결과:', exportHistory);
             
             if (exportHistory && exportHistory.length > 0) {
-                exportHistory.forEach((history, index) => {
-                    const historyItem = this.createExportHistoryItem(history, index === 0 && product.status === 'Exported');
-                    container.appendChild(historyItem);
+                // 반출 이력을 export_date 기준으로 다시 정렬하여 최신 기록 확보
+                const sortedHistory = exportHistory.sort((a, b) => {
+                    const dateA = new Date(a.export_date || 0);
+                    const dateB = new Date(b.export_date || 0);
+                    return dateB - dateA; // 최신 날짜가 먼저 오도록 내림차순
                 });
-            } else {
-                // 현재 반출 상태가 있는 경우 기본 이력 표시
-                if (product.status === 'Exported' && product.exported_date) {
-                    const currentExport = {
-                        export_date: product.exported_date,
-                        exported_by: product.exported_by,
-                        export_purpose: product.export_purpose,
-                        return_date: null,
-                        returned_by: null,
-                        notes: '현재 반출 중'
-                    };
+                
+                console.log('📅 정렬된 반출 이력:', sortedHistory);
+                
+                // 반출 현황에는 최신 반출 정보만 표시 (현재 상태)
+                const latestExport = sortedHistory[0]; // 가장 최근 반출
+                console.log('✅ 최신 반출 기록:', latestExport);
+                
+                // 현재 반출 중인 경우 최신 정보 표시
+                if (product.status === 'Exported') {
+                    const currentExportItem = this.createExportHistoryItem(latestExport, true);
+                    container.appendChild(currentExportItem);
                     
-                    const historyItem = this.createExportHistoryItem(currentExport, true);
-                    container.appendChild(historyItem);
+                    // 추가로 "현재 반출 중" 표시
+                    const currentStatusDiv = document.createElement('div');
+                    currentStatusDiv.className = 'current-export-status';
+                    currentStatusDiv.innerHTML = `
+                        <div class="export-status-badge current">현재 반출 중</div>
+                        <div class="export-history-details">
+                            <div class="export-detail-item">
+                                <label>반출자</label>
+                                <span>${latestExport.exported_by || '-'}</span>
+                            </div>
+                            <div class="export-detail-item">
+                                <label>반출일</label>
+                                <span>${latestExport.export_date ? new Date(latestExport.export_date).toLocaleDateString('ko-KR') : '-'}</span>
+                            </div>
+                            <div class="export-detail-item">
+                                <label>반출 목적</label>
+                                <span>${latestExport.export_purpose || '-'}</span>
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(currentStatusDiv);
+                }
+                
+                // 과거 이력은 별도로 표시 (상세 이력)
+                if (sortedHistory.length > 1) {
+                    const historyHeader = document.createElement('h4');
+                    historyHeader.textContent = '📋 과거 반출 이력';
+                    historyHeader.style.marginTop = '20px';
+                    historyHeader.style.marginBottom = '15px';
+                    historyHeader.style.color = '#495057';
+                    container.appendChild(historyHeader);
+                    
+                    // 과거 이력들 표시 (최신 제외)
+                    sortedHistory.slice(1).forEach((history, index) => {
+                        const historyItem = this.createExportHistoryItem(history, false);
+                        container.appendChild(historyItem);
+                    });
+                }
+            } else {
+                // 반출 이력이 없는 경우
+                if (product.status === 'Available') {
+                    container.innerHTML = '<div class="no-export-history">아직 반출 이력이 없습니다. (현재 사용 가능 상태)</div>';
+                } else if (product.status === 'Exported') {
+                    // 상태는 Exported인데 이력이 없는 경우 (데이터 불일치)
+                    container.innerHTML = '<div class="no-export-history">반출 상태이지만 이력 정보를 찾을 수 없습니다.</div>';
                 } else {
                     container.innerHTML = '<div class="no-export-history">아직 반출 이력이 없습니다.</div>';
                 }
@@ -2118,17 +2317,28 @@ class DesktopToolManagement {
 
     // 캐시된 반출 이력 가져오기
     async getCachedExportHistory(productId) {
-        // 캐시에 있으면 즉시 반환
+        // 캐시에 있으면 즉시 반환 (정렬된 상태로)
         if (this.exportHistoryCache.has(productId)) {
-            return this.exportHistoryCache.get(productId);
+            const cachedHistory = this.exportHistoryCache.get(productId);
+            // 캐시된 데이터도 정렬하여 반환
+            return cachedHistory.sort((a, b) => {
+                const dateA = new Date(a.export_date || 0);
+                const dateB = new Date(b.export_date || 0);
+                return dateB - dateA; // 최신 날짜가 먼저 오도록 내림차순
+            });
         }
         
         // 캐시에 없으면 Supabase에서 가져오기
         try {
             const exportHistory = await window.toolsDB.exportHistory.getByProductId(productId);
-            // 캐시에 저장
-            this.exportHistoryCache.set(productId, exportHistory);
-            return exportHistory;
+            // 정렬된 상태로 캐시에 저장
+            const sortedHistory = exportHistory.sort((a, b) => {
+                const dateA = new Date(a.export_date || 0);
+                const dateB = new Date(b.export_date || 0);
+                return dateB - dateA; // 최신 날짜가 먼저 오도록 내림차순
+            });
+            this.exportHistoryCache.set(productId, sortedHistory);
+            return sortedHistory;
         } catch (error) {
             console.error('반출 이력 조회 실패:', error);
             return null;
