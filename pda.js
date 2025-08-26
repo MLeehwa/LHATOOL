@@ -760,7 +760,7 @@ class PDAToolManagement {
         
         try {
             console.log('🔍 제품 검색 시작...');
-            const product = await this.findProduct(scanValue);
+            const product = await this.findProduct(scanValue, 'export');
             console.log('🔍 검색 결과 제품:', product);
             
             if (product) {
@@ -820,7 +820,7 @@ class PDAToolManagement {
         this.isProcessing = true;
         
         try {
-            const product = await this.findProduct(scanValue);
+            const product = await this.findProduct(scanValue, 'return');
             if (product) {
                 if (product.status === 'Exported') {
                     // 제품을 장바구니에 추가
@@ -851,8 +851,8 @@ class PDAToolManagement {
     }
 
     // Find product by ID, serial number, or barcode (Supabase 연동)
-    async findProduct(identifier) {
-        console.log('🔍 findProduct 호출됨, identifier:', identifier);
+    async findProduct(identifier, mode = 'export') {
+        console.log('🔍 findProduct 호출됨, identifier:', identifier, 'mode:', mode);
         this.hideProductInfo(mode); // 기존 제품 정보 숨기기
         
         try {
