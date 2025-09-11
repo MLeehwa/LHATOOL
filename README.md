@@ -5,6 +5,12 @@ Supabase 기반의 현대적인 공구 관리 웹 애플리케이션입니다. �
 
 ## ✨ 주요 기능
 
+### 🔐 **사용자 인증 시스템**
+- **데이터베이스 기반 로그인**: 하드코딩된 로그인에서 DB 기반으로 업그레이드
+- **비밀번호 변경**: leehwa 계정의 비밀번호를 직접 변경할 수 있는 기능
+- **단일 사용자 시스템**: leehwa 계정 하나만 사용하는 간단한 인증 시스템
+- **세션 관리**: 로그인 상태 유지 및 자동 로그아웃
+
 ### 🖥️ **Desktop 모드**
 - **제품 등록/관리**: 메이커, 모델명, 규격, 바코드 등 상세 정보 관리
 - **카테고리 관리**: 동적 카테고리 추가/삭제/수정
@@ -44,8 +50,9 @@ cd LHATOOL
 
 ### **2. Supabase 프로젝트 설정**
 1. [Supabase](https://supabase.com)에서 새 프로젝트 생성
-2. `supabase_tables.sql` 스크립트 실행
-3. `supabase.js`에 프로젝트 URL과 API 키 입력
+2. `supabase_tables.sql` 스크립트 실행 (기본 테이블)
+3. `users_table.sql` 스크립트 실행 (사용자 테이블 및 함수)
+4. `supabase.js`에 프로젝트 URL과 API 키 입력
 
 ### **3. 웹 서버 실행**
 ```bash
@@ -85,6 +92,7 @@ LHATOOL/
 - `tools_products`: 제품 정보 (메이커, 모델, 규격, 바코드 등)
 - `tools_categories`: 제품 카테고리
 - `tools_export_history`: 반출/반납 이력
+- `tools_users`: 사용자 인증 (leehwa 계정만)
 
 ### **제품 상태**
 - `Available`: 사용 가능

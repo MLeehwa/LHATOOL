@@ -15,6 +15,44 @@ const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey, {
 
 // 공구 관리 시스템 데이터베이스 함수들
 const toolsDB = {
+  // 사용자 관련 함수 (로그인 및 비밀번호 변경만)
+  users: {
+    // 사용자 로그인
+    async login(username, password) {
+      const { data, error } = await supabase
+        .rpc('authenticate_user', {
+          p_username: username,
+          p_password: password
+        });
+      
+      if (error) {
+        console.error('Error authenticating user:', error);
+        return null;
+      }
+      
+      if (data && data.length > 0) {
+        return data[0];
+      }
+      return null;
+    },
+
+    // 비밀번호 변경
+    async changePassword(username, oldPassword, newPassword) {
+      const { data, error } = await supabase
+        .rpc('change_user_password', {
+          p_username: username,
+          p_old_password: oldPassword,
+          p_new_password: newPassword
+        });
+      
+      if (error) {
+        console.error('Error changing password:', error);
+        return false;
+      }
+      
+      return data;
+    }
+  },
   // 제품 관련 함수
   products: {
     // 모든 제품 조회

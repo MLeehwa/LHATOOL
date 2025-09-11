@@ -2,11 +2,25 @@
 DROP TABLE IF EXISTS tools_export_history;
 DROP TABLE IF EXISTS tools_products;
 DROP TABLE IF EXISTS tools_categories;
+DROP TABLE IF EXISTS tools_users;
 
 -- 기존 테이블에 code 컬럼 추가 (기존 데이터가 있는 경우)
 -- ALTER TABLE tools_categories ADD COLUMN IF NOT EXISTS code VARCHAR(10) UNIQUE;
 
--- 1. tools_categories 테이블 (카테고리)
+-- 1. tools_users 테이블 (사용자)
+CREATE TABLE tools_users (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(50) UNIQUE NOT NULL,          -- 사용자명
+    password_hash VARCHAR(255) NOT NULL,           -- 해시된 비밀번호
+    full_name VARCHAR(100) NOT NULL,               -- 실명
+    role VARCHAR(20) DEFAULT 'user',               -- 역할 (admin, user)
+    is_active BOOLEAN DEFAULT true,                -- 활성 상태
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    last_login TIMESTAMP WITH TIME ZONE
+);
+
+-- 2. tools_categories 테이블 (카테고리)
 CREATE TABLE tools_categories (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100) UNIQUE NOT NULL,
@@ -14,7 +28,7 @@ CREATE TABLE tools_categories (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 2. tools_products 테이블 (제품 - 메이커, 모델, 규격 추가)
+-- 3. tools_products 테이블 (제품 - 메이커, 모델, 규격 추가)
 CREATE TABLE tools_products (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,                    -- 제품명
@@ -38,7 +52,7 @@ CREATE TABLE tools_products (
     item_number INTEGER DEFAULT 1                  -- 동일 제품 내 번호 (1, 2, 3...)
 );
 
--- 3. tools_export_history 테이블 (반출 이력)
+-- 4. tools_export_history 테이블 (반출 이력)
 CREATE TABLE tools_export_history (
     id SERIAL PRIMARY KEY,
     product_id INTEGER REFERENCES tools_products(id),

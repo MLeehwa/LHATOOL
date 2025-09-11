@@ -250,6 +250,21 @@
             box-shadow: 0 8px 25px rgba(40, 167, 69, 0.4);
         }
 
+        .user-management-card:hover {
+            border-color: #6c757d;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        }
+
+        .user-management-card .btn {
+            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+            color: white;
+            box-shadow: 0 5px 15px rgba(108, 117, 125, 0.3);
+        }
+
+        .user-management-card .btn:hover {
+            box-shadow: 0 8px 25px rgba(108, 117, 125, 0.4);
+        }
+
         .logout-btn {
             position: absolute;
             top: 20px;
@@ -268,6 +283,117 @@
         .logout-btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(220, 53, 69, 0.3);
+        }
+
+        .user-info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .user-name {
+            color: #2c3e50;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .change-password-btn {
+            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .change-password-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(108, 117, 125, 0.3);
+        }
+
+        /* 비밀번호 변경 모달 스타일 */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 15% auto;
+            padding: 30px;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .modal-header h3 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            position: absolute;
+            right: 20px;
+            top: 15px;
+        }
+
+        .close:hover {
+            color: #000;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .modal-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .modal-btn-primary {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+        }
+
+        .modal-btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .modal-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
         }
 
         .container {
@@ -337,16 +463,18 @@
             </form>
 
             <div class="demo-info">
-                <h4>📋 데모 계정 정보</h4>
-                <p>시스템 테스트를 위한 데모 계정입니다.</p>
-                <div class="demo-credentials">
+                <h4>📋 로그인 정보</h4>
+                <p>시스템에 로그인하세요.</p>
 
-                </div>
             </div>
         </div>
 
         <!-- 메인 메뉴 화면 -->
         <div class="main-menu-container" id="mainMenuContainer" style="display: none;">
+            <div class="user-info">
+                <span class="user-name" id="userName">사용자</span>
+                <button class="change-password-btn" onclick="openChangePasswordModal()">비밀번호 변경</button>
+            </div>
             <button class="logout-btn" onclick="logout()">로그아웃</button>
             
             <div class="logo">
@@ -371,10 +499,52 @@
                 </div>
             </div>
         </div>
+
+        <!-- 비밀번호 변경 모달 -->
+        <div id="changePasswordModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <span class="close" onclick="closeChangePasswordModal()">&times;</span>
+                    <h3>비밀번호 변경</h3>
+                    <p>현재 비밀번호와 새 비밀번호를 입력하세요</p>
+                </div>
+                
+                <form id="changePasswordForm">
+                    <div class="form-group">
+                        <label for="currentPassword">현재 비밀번호</label>
+                        <input type="password" id="currentPassword" name="currentPassword" placeholder="현재 비밀번호를 입력하세요" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="newPassword">새 비밀번호</label>
+                        <input type="password" id="newPassword" name="newPassword" placeholder="새 비밀번호를 입력하세요" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="confirmPassword">새 비밀번호 확인</label>
+                        <input type="password" id="confirmPassword" name="confirmPassword" placeholder="새 비밀번호를 다시 입력하세요" required>
+                    </div>
+                    
+                    <div class="error-message" id="changePasswordError" style="display: none;">
+                        오류 메시지가 여기에 표시됩니다.
+                    </div>
+                    
+                    <div class="success-message" id="changePasswordSuccess" style="display: none;">
+                        비밀번호가 성공적으로 변경되었습니다.
+                    </div>
+                    
+                    <div class="modal-buttons">
+                        <button type="button" class="modal-btn modal-btn-secondary" onclick="closeChangePasswordModal()">취소</button>
+                        <button type="submit" class="modal-btn modal-btn-primary">변경</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
     </div>
 
     <script>
-        document.getElementById('loginForm').addEventListener('submit', function(e) {
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
             const username = document.getElementById('username').value.trim();
@@ -387,25 +557,46 @@
             // 로딩 표시
             document.getElementById('loading').style.display = 'block';
             
-            // 로그인 검증 (아이디: leehwa, 비밀번호: 5678)
-            if (username === 'leehwa' && password === '5678') {
-                // 로그인 성공
-                setTimeout(() => {
-                    document.getElementById('loading').style.display = 'none';
-                    document.getElementById('successMessage').style.display = 'block';
+            try {
+                // 데이터베이스에서 사용자 인증
+                const user = await toolsDB.users.login(username, password);
+                
+                if (user) {
+                    // 로그인 성공 - 사용자 정보를 세션에 저장
+                    sessionStorage.setItem('currentUser', JSON.stringify(user));
                     
-                    // 1.5초 후 메인 메뉴 표시
+                    // 사용자 이름 표시
+                    document.getElementById('userName').textContent = user.full_name;
+                    
+                    
                     setTimeout(() => {
-                        document.getElementById('loginContainer').style.display = 'none';
-                        document.getElementById('mainMenuContainer').style.display = 'block';
-                        document.querySelector('.main-menu').style.display = 'block';
-                    }, 1500);
-                }, 1000);
-            } else {
-                // 로그인 실패
+                        document.getElementById('loading').style.display = 'none';
+                        document.getElementById('successMessage').style.display = 'block';
+                        
+                        // 1.5초 후 메인 메뉴 표시
+                        setTimeout(() => {
+                            document.getElementById('loginContainer').style.display = 'none';
+                            document.getElementById('mainMenuContainer').style.display = 'block';
+                            document.querySelector('.main-menu').style.display = 'block';
+                        }, 1500);
+                    }, 1000);
+                } else {
+                    // 로그인 실패
+                    setTimeout(() => {
+                        document.getElementById('loading').style.display = 'none';
+                        document.getElementById('errorMessage').style.display = 'block';
+                        
+                        // 비밀번호 필드 초기화
+                        document.getElementById('password').value = '';
+                        document.getElementById('password').focus();
+                    }, 1000);
+                }
+            } catch (error) {
+                console.error('Login error:', error);
                 setTimeout(() => {
                     document.getElementById('loading').style.display = 'none';
                     document.getElementById('errorMessage').style.display = 'block';
+                    document.getElementById('errorMessage').textContent = '로그인 중 오류가 발생했습니다.';
                     
                     // 비밀번호 필드 초기화
                     document.getElementById('password').value = '';
@@ -424,6 +615,9 @@
 
         function logout() {
             if (confirm('로그아웃하시겠습니까?')) {
+                // 세션에서 사용자 정보 제거
+                sessionStorage.removeItem('currentUser');
+                
                 // 로그인 화면으로 돌아가기
                 document.getElementById('mainMenuContainer').style.display = 'none';
                 document.getElementById('loginContainer').style.display = 'block';
@@ -436,6 +630,79 @@
             }
         }
 
+        // 비밀번호 변경 모달 열기
+        function openChangePasswordModal() {
+            document.getElementById('changePasswordModal').style.display = 'block';
+            document.getElementById('changePasswordForm').reset();
+            document.getElementById('changePasswordError').style.display = 'none';
+            document.getElementById('changePasswordSuccess').style.display = 'none';
+        }
+
+        // 비밀번호 변경 모달 닫기
+        function closeChangePasswordModal() {
+            document.getElementById('changePasswordModal').style.display = 'none';
+            document.getElementById('changePasswordForm').reset();
+            document.getElementById('changePasswordError').style.display = 'none';
+            document.getElementById('changePasswordSuccess').style.display = 'none';
+        }
+
+        // 비밀번호 변경 폼 제출
+        document.getElementById('changePasswordForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            
+            // 에러 메시지 숨기기
+            document.getElementById('changePasswordError').style.display = 'none';
+            document.getElementById('changePasswordSuccess').style.display = 'none';
+            
+            // 비밀번호 확인 검증
+            if (newPassword !== confirmPassword) {
+                document.getElementById('changePasswordError').textContent = '새 비밀번호가 일치하지 않습니다.';
+                document.getElementById('changePasswordError').style.display = 'block';
+                return;
+            }
+            
+            // 비밀번호 길이 검증
+            if (newPassword.length < 4) {
+                document.getElementById('changePasswordError').textContent = '새 비밀번호는 4자 이상이어야 합니다.';
+                document.getElementById('changePasswordError').style.display = 'block';
+                return;
+            }
+            
+            try {
+                // 현재 사용자 정보 가져오기
+                const currentUser = JSON.parse(sessionStorage.getItem('currentUser'));
+                if (!currentUser) {
+                    document.getElementById('changePasswordError').textContent = '로그인 정보를 찾을 수 없습니다.';
+                    document.getElementById('changePasswordError').style.display = 'block';
+                    return;
+                }
+                
+                // 비밀번호 변경 시도
+                const success = await toolsDB.users.changePassword(currentUser.username, currentPassword, newPassword);
+                
+                if (success) {
+                    document.getElementById('changePasswordSuccess').style.display = 'block';
+                    document.getElementById('changePasswordForm').reset();
+                    
+                    // 2초 후 모달 닫기
+                    setTimeout(() => {
+                        closeChangePasswordModal();
+                    }, 2000);
+                } else {
+                    document.getElementById('changePasswordError').textContent = '현재 비밀번호가 올바르지 않습니다.';
+                    document.getElementById('changePasswordError').style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Password change error:', error);
+                document.getElementById('changePasswordError').textContent = '비밀번호 변경 중 오류가 발생했습니다.';
+                document.getElementById('changePasswordError').style.display = 'block';
+            }
+        });
+
         // Enter 키로 로그인
         document.getElementById('password').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
@@ -446,6 +713,15 @@
         // 페이지 로드 시 아이디 필드에 포커스
         window.addEventListener('load', function() {
             document.getElementById('username').focus();
+        });
+
+        // 모달 외부 클릭 시 닫기
+        window.addEventListener('click', function(event) {
+            const changePasswordModal = document.getElementById('changePasswordModal');
+            
+            if (event.target === changePasswordModal) {
+                closeChangePasswordModal();
+            }
         });
     </script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
