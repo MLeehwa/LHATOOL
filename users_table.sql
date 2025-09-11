@@ -6,6 +6,7 @@ CREATE TABLE tools_users (
     id SERIAL PRIMARY KEY,
     username VARCHAR(50) UNIQUE NOT NULL,          -- 사용자명
     password_hash VARCHAR(255) NOT NULL,           -- 해시된 비밀번호
+    master_password_hash VARCHAR(255),             -- 2차 비밀번호 해시
     full_name VARCHAR(100) NOT NULL,               -- 실명
     role VARCHAR(20) DEFAULT 'user',               -- 역할 (admin, user)
     is_active BOOLEAN DEFAULT true,                -- 활성 상태
@@ -40,23 +41,52 @@ CREATE TRIGGER update_tools_users_updated_at
     FOR EACH ROW 
     EXECUTE FUNCTION update_users_updated_at_column();
 
--- 기본 사용자 데이터 삽입 (leehwa 계정만)
--- 비밀번호는 '5678'을 PostgreSQL crypt() 함수로 해시한 값입니다
+-- 기본 사용자 데이터 삽입
+-- 비밀번호는 PostgreSQL crypt() 함수로 해시한 값입니다
 -- 실제 운영에서는 더 강력한 비밀번호를 사용하세요
-INSERT INTO tools_users (username, password_hash, full_name, role) VALUES 
-    ('leehwa', crypt('5678', gen_salt('bf')), '이화아메리카 관리자', 'admin');
+
+-- leehwa 계정 (일반 비밀번호 + 2차 비밀번호)
+INSERT INTO tools_users (username, password_hash, master_password_hash, full_name, role) VALUES 
+    ('leehwa', 
+     crypt('5678', gen_salt('bf')),           -- 일반 비밀번호: 5678
+     crypt('master123', gen_salt('bf')),      -- 2차 비밀번호: master123
+     '이화아메리카 관리자', 
+     'admin');
 
 -- 사용자 관리 함수들
--- 비밀번호 변경 함수
+-- 2차 비밀번호 확인 함수
+CREATE OR REPLACE FUNCTION verify_master_password(p_username VARCHAR(50), p_master_password VARCHAR(255))
+RETURNS BOOLEAN AS $$
+DECLARE
+    master_hash VARCHAR(255);
+BEGIN
+    -- 사용자의 2차 비밀번호 해시 조회
+    SELECT master_password_hash INTO master_hash
+    FROM tools_users 
+    WHERE username = p_username;
+    
+    -- 2차 비밀번호가 설정되지 않았으면 false 반환
+    IF master_hash IS NULL THEN
+        RETURN false;
+    END IF;
+    
+    -- 2차 비밀번호 확인
+    RETURN master_hash = crypt(p_master_password, master_hash);
+END;
+$$ LANGUAGE plpgsql;
+
+-- 비밀번호 변경 함수 (2차 비밀번호 보호)
 CREATE OR REPLACE FUNCTION change_user_password(
     p_username VARCHAR(50),
     p_old_password VARCHAR(255),
-    p_new_password VARCHAR(255)
+    p_new_password VARCHAR(255),
+    p_master_password VARCHAR(255) DEFAULT NULL
 )
 RETURNS BOOLEAN AS $$
 DECLARE
     user_record RECORD;
     new_hash VARCHAR(255);
+    is_master_valid BOOLEAN := false;
 BEGIN
     -- 사용자 정보 조회
     SELECT * INTO user_record 
@@ -68,10 +98,17 @@ BEGIN
         RETURN false;
     END IF;
     
-    -- 기존 비밀번호 확인 (실제로는 bcrypt.verify를 사용해야 함)
-    -- 여기서는 단순히 해시 비교
-    IF user_record.password_hash != crypt(p_old_password, user_record.password_hash) THEN
-        RETURN false;
+    -- 2차 비밀번호 확인 (2차 비밀번호가 제공된 경우)
+    IF p_master_password IS NOT NULL THEN
+        SELECT verify_master_password(p_username, p_master_password) INTO is_master_valid;
+        IF NOT is_master_valid THEN
+            RETURN false; -- 2차 비밀번호가 틀림
+        END IF;
+    ELSE
+        -- 2차 비밀번호가 제공되지 않으면 기존 비밀번호 확인
+        IF user_record.password_hash != crypt(p_old_password, user_record.password_hash) THEN
+            RETURN false;
+        END IF;
     END IF;
     
     -- 새 비밀번호 해시 생성

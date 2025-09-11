@@ -34,3 +34,6 @@ coverage/
 # Temporary folders
 tmp/
 temp/
+
+# Sensitive files (비밀번호 재설정 스크립트)
+password_reset.sql

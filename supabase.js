@@ -36,14 +36,21 @@ const toolsDB = {
       return null;
     },
 
-    // 비밀번호 변경
-    async changePassword(username, oldPassword, newPassword) {
+    // 비밀번호 변경 (2차 비밀번호 보호)
+    async changePassword(username, oldPassword, newPassword, masterPassword = null) {
+      const params = {
+        p_username: username,
+        p_old_password: oldPassword,
+        p_new_password: newPassword
+      };
+      
+      // 2차 비밀번호가 제공되면 추가
+      if (masterPassword) {
+        params.p_master_password = masterPassword;
+      }
+      
       const { data, error } = await supabase
-        .rpc('change_user_password', {
-          p_username: username,
-          p_old_password: oldPassword,
-          p_new_password: newPassword
-        });
+        .rpc('change_user_password', params);
       
       if (error) {
         console.error('Error changing password:', error);
