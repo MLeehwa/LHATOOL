@@ -40,7 +40,7 @@ Supabase 기반의 현대적인 공구 관리 웹 애플리케이션입니다. �
 - **JsBarcode**: 바코드 생성 및 표시
 - **SheetJS**: 엑셀 파일 생성 및 다운로드
 
-## 🚀 설치 및 실행
+## 🚀 빠른 시작
 
 ### **1. 저장소 클론**
 ```bash
@@ -48,11 +48,33 @@ git clone https://github.com/MLeehwa/LHATOOL.git
 cd LHATOOL
 ```
 
+### **2. Supabase 설정 (5분)**
+1. [Supabase](https://supabase.com)에서 새 프로젝트 생성
+2. `supabase_tables.sql` → `users_table.sql` 순서로 실행
+3. `supabase.js`에 프로젝트 URL과 API 키 입력
+4. 자세한 방법은 [SUPABASE_SETUP.md](SUPABASE_SETUP.md) 참조
+
+### **3. 웹 서버 실행**
+```bash
+python -m http.server 8000
+# 또는
+npx http-server -p 8000
+```
+
+### **4. 로그인**
+- 브라우저에서 `http://localhost:8000` 접속
+- 아이디: `leehwa`, 비밀번호: `5678`
+
+---
+
+## 📖 상세 설치 가이드
+
 ### **2. Supabase 프로젝트 설정**
 1. [Supabase](https://supabase.com)에서 새 프로젝트 생성
 2. `supabase_tables.sql` 스크립트 실행 (기본 테이블)
 3. `users_table.sql` 스크립트 실행 (사용자 테이블 및 함수)
 4. `supabase.js`에 프로젝트 URL과 API 키 입력
+5. 자세한 설정 방법은 [SUPABASE_SETUP.md](SUPABASE_SETUP.md) 참조
 
 ### **3. 웹 서버 실행**
 ```bash
@@ -74,16 +96,17 @@ http://localhost:8000
 
 ```
 LHATOOL/
-├── index.html          # 메인 페이지 (모드 선택)
-├── desktop.html        # 데스크톱 모드 인터페이스
-├── pda.html           # PDA/태블렛 모드 인터페이스
-├── LOGIN.HTML         # 로그인 페이지
-├── desktop.js         # 데스크톱 모드 JavaScript
-├── pda.js            # PDA 모드 JavaScript
-├── supabase.js       # Supabase 연동 설정
-├── desktop.css       # 데스크톱 모드 스타일
-├── supabase_tables.sql # 데이터베이스 스키마
-└── README.md         # 프로젝트 문서
+├── index.html              # 메인 페이지 (로그인 + 모드 선택)
+├── desktop.html            # 데스크톱 모드 인터페이스
+├── pda.html               # PDA/태블렛 모드 인터페이스
+├── desktop.js             # 데스크톱 모드 JavaScript
+├── pda.js                # PDA 모드 JavaScript
+├── supabase.js            # Supabase 연동 설정
+├── supabase_tables.sql    # 기본 데이터베이스 스키마
+├── users_table.sql        # 사용자 테이블 및 함수
+├── SUPABASE_SETUP.md      # Supabase 설정 가이드
+├── .gitignore            # Git 무시 파일 목록
+└── README.md             # 프로젝트 문서
 ```
 
 ## 🗄️ 데이터베이스 스키마
@@ -92,7 +115,14 @@ LHATOOL/
 - `tools_products`: 제품 정보 (메이커, 모델, 규격, 바코드 등)
 - `tools_categories`: 제품 카테고리
 - `tools_export_history`: 반출/반납 이력
-- `tools_users`: 사용자 인증 (leehwa 계정만)
+- `tools_users`: 사용자 인증 (leehwa 계정 + 2차 비밀번호)
+
+### **기본 계정 정보**
+- **사용자명**: `leehwa`
+- **비밀번호**: `5678`
+- **2차 비밀번호**: `master123` (비밀번호 변경 시 필요)
+
+⚠️ **보안 주의**: 운영 환경에서는 반드시 비밀번호를 변경하세요!
 
 ### **제품 상태**
 - `Available`: 사용 가능

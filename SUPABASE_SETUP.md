@@ -1,250 +1,182 @@
-# 🔧 Supabase 연동 설정 가이드
+# 🗄️ Supabase 데이터베이스 설정 가이드
 
-## **1단계: Supabase 프로젝트 설정**
+이 가이드는 LHATOOL 공구 관리 시스템의 Supabase 데이터베이스 설정 방법을 안내합니다.
 
-### **1.1 테이블 생성**
-1. [Supabase Dashboard](https://supabase.com/dashboard)에 접속
-2. 프로젝트 `smtqsqokgfxlmyldeeks` 선택
-3. **SQL Editor** 메뉴 클릭
-4. `supabase_tables.sql` 파일의 내용을 복사하여 실행
+## 📋 목차
+1. [Supabase 프로젝트 생성](#1-supabase-프로젝트-생성)
+2. [데이터베이스 테이블 생성](#2-데이터베이스-테이블-생성)
+3. [Supabase 설정 정보 입력](#3-supabase-설정-정보-입력)
+4. [보안 설정](#4-보안-설정)
+5. [테스트 및 확인](#5-테스트-및-확인)
 
-### **1.2 테이블 확인**
+---
+
+## 1. Supabase 프로젝트 생성
+
+### 1.1 Supabase 계정 생성
+1. [Supabase 웹사이트](https://supabase.com)에 접속
+2. **"Start your project"** 버튼 클릭
+3. GitHub 계정으로 로그인 (권장)
+
+### 1.2 새 프로젝트 생성
+1. **"New Project"** 버튼 클릭
+2. 프로젝트 정보 입력:
+   - **Name**: `LHATOOL` (또는 원하는 이름)
+   - **Database Password**: 강력한 비밀번호 설정 (기록해두세요!)
+   - **Region**: 가장 가까운 지역 선택
+3. **"Create new project"** 버튼 클릭
+4. 프로젝트 생성 완료까지 2-3분 대기
+
+---
+
+## 2. 데이터베이스 테이블 생성
+
+### 2.1 SQL Editor 접속
+1. Supabase 대시보드에서 **"SQL Editor"** 메뉴 클릭
+2. **"New query"** 버튼 클릭
+
+### 2.2 기본 테이블 생성
+1. `supabase_tables.sql` 파일 내용을 복사
+2. SQL Editor에 붙여넣기
+3. **"Run"** 버튼 클릭하여 실행
+4. 성공 메시지 확인
+
+### 2.3 사용자 테이블 생성
+1. `users_table.sql` 파일 내용을 복사
+2. SQL Editor에 붙여넣기
+3. **"Run"** 버튼 클릭하여 실행
+4. 성공 메시지 확인
+
+### 2.4 생성된 테이블 확인
+**Table Editor**에서 다음 테이블들이 생성되었는지 확인:
+- `tools_products` (제품 정보)
+- `tools_categories` (카테고리)
+- `tools_export_history` (반출 이력)
+- `tools_users` (사용자 정보)
+
+---
+
+## 3. Supabase 설정 정보 입력
+
+### 3.1 프로젝트 설정 정보 확인
+1. Supabase 대시보드에서 **"Settings"** → **"API"** 메뉴 클릭
+2. 다음 정보를 복사:
+   - **Project URL**
+   - **anon public** 키
+
+### 3.2 supabase.js 파일 수정
+1. 프로젝트 폴더에서 `supabase.js` 파일 열기
+2. 다음 부분을 수정:
+
+```javascript
+// Supabase 프로젝트 설정
+const supabaseUrl = 'YOUR_SUPABASE_URL_HERE';        // ← 여기에 Project URL 입력
+const supabaseAnonKey = 'YOUR_SUPABASE_ANON_KEY_HERE'; // ← 여기에 anon public 키 입력
+```
+
+**예시:**
+```javascript
+const supabaseUrl = 'https://abcdefghijklmnop.supabase.co';
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...';
+```
+
+---
+
+## 4. 보안 설정
+
+### 4.1 Row Level Security (RLS) 확인
+- 모든 테이블에 RLS가 활성화되어 있음
+- 현재는 개발용으로 모든 접근이 허용됨
+- 운영 환경에서는 적절한 정책 설정 필요
+
+### 4.2 기본 계정 정보
+시스템에 기본으로 생성되는 계정:
+- **사용자명**: `leehwa`
+- **비밀번호**: `5678`
+- **2차 비밀번호**: `master123`
+
+⚠️ **보안 주의사항**: 운영 환경에서는 반드시 비밀번호를 변경하세요!
+
+---
+
+## 5. 테스트 및 확인
+
+### 5.1 웹 애플리케이션 실행
+```bash
+# Python HTTP 서버 실행
+python -m http.server 8000
+
+# 또는 Node.js http-server
+npx http-server -p 8000
+```
+
+### 5.2 로그인 테스트
+1. 브라우저에서 `http://localhost:8000` 접속
+2. 다음 정보로 로그인:
+   - **아이디**: `leehwa`
+   - **비밀번호**: `5678`
+3. 로그인 성공 확인
+
+### 5.3 비밀번호 변경 테스트
+1. 메인 메뉴에서 **"비밀번호 변경"** 버튼 클릭
+2. 다음 정보 입력:
+   - **현재 비밀번호**: `5678`
+   - **새 비밀번호**: 원하는 비밀번호
+   - **2차 비밀번호**: `master123`
+3. 변경 성공 확인
+
+---
+
+## 🔧 문제 해결
+
+### 자주 발생하는 문제들
+
+#### 1. 로그인이 안 되는 경우
+- Supabase URL과 API 키가 올바른지 확인
+- `users_table.sql`이 정상적으로 실행되었는지 확인
+- 브라우저 개발자 도구의 콘솔에서 오류 메시지 확인
+
+#### 2. 데이터베이스 연결 오류
+- Supabase 프로젝트가 정상적으로 생성되었는지 확인
+- 네트워크 연결 상태 확인
+- Supabase 서비스 상태 확인
+
+#### 3. 테이블이 생성되지 않은 경우
+- SQL 스크립트 실행 시 오류 메시지 확인
+- Supabase 프로젝트의 데이터베이스 권한 확인
+- 스크립트를 순서대로 실행했는지 확인
+
+---
+
+## 📞 지원
+
+문제가 발생하거나 도움이 필요한 경우:
+1. GitHub Issues에 문제 보고
+2. 프로젝트 문서 확인
+3. Supabase 공식 문서 참조
+
+---
+
+## 🔐 보안 권장사항
+
+### 운영 환경 배포 시
+1. **비밀번호 변경**: 기본 비밀번호를 강력한 비밀번호로 변경
+2. **2차 비밀번호 변경**: `master123`을 안전한 비밀번호로 변경
+3. **RLS 정책 설정**: 적절한 Row Level Security 정책 적용
+4. **API 키 보안**: API 키를 환경 변수로 관리
+5. **HTTPS 사용**: 프로덕션 환경에서는 반드시 HTTPS 사용
+
+### 비밀번호 변경 방법
+1. Supabase SQL Editor에서 다음 쿼리 실행:
 ```sql
--- 생성된 테이블 확인
-SELECT table_name FROM information_schema.tables 
-WHERE table_schema = 'public' AND table_name LIKE 'tools_%';
-
--- 각 테이블의 레코드 수 확인
-SELECT 'tools_categories' as table_name, COUNT(*) as record_count FROM tools_categories
-UNION ALL
-SELECT 'tools_products' as table_name, COUNT(*) as record_count FROM tools_products
-UNION ALL
-SELECT 'tools_export_history' as table_name, COUNT(*) as record_count FROM tools_export_history;
+-- leehwa 계정 비밀번호 변경
+UPDATE tools_users 
+SET password_hash = crypt('새비밀번호', gen_salt('bf')),
+    master_password_hash = crypt('새2차비밀번호', gen_salt('bf')),
+    updated_at = NOW()
+WHERE username = 'leehwa';
 ```
 
-## **2단계: 기존 코드에 Supabase 연동**
+---
 
-### **2.1 HTML 파일에 Supabase 스크립트 추가**
-```html
-<!-- desktop.html, pda.html, index.html에 추가 -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="supabase.js"></script>
-```
-
-### **2.2 기존 localStorage 코드를 Supabase로 변경**
-
-#### **제품 추가 예시**
-```javascript
-// 기존 코드
-function addProduct(productData) {
-  const products = JSON.parse(localStorage.getItem('desktopProducts')) || [];
-  products.push(productData);
-  localStorage.setItem('desktopProducts', JSON.stringify(products));
-}
-
-// Supabase 연동 코드
-async function addProduct(productData) {
-  try {
-    const result = await toolsDB.products.add(productData);
-    if (result) {
-      console.log('제품이 성공적으로 추가되었습니다:', result);
-      return true;
-    }
-  } catch (error) {
-    console.error('제품 추가 실패:', error);
-    return false;
-  }
-}
-```
-
-#### **제품 목록 조회 예시**
-```javascript
-// 기존 코드
-function getProducts() {
-  return JSON.parse(localStorage.getItem('desktopProducts')) || [];
-}
-
-// Supabase 연동 코드
-async function getProducts() {
-  try {
-    const products = await toolsDB.products.getAll();
-    return products;
-  } catch (error) {
-    console.error('제품 조회 실패:', error);
-    return [];
-  }
-}
-```
-
-## **3단계: 주요 기능별 Supabase 연동**
-
-### **3.1 제품 관리**
-```javascript
-// 제품 추가
-const newProduct = {
-  name: '새 제품명',
-  category: '전동공구',
-  status: 'Available',
-  serial_number: 'SN001',
-  description: '제품 설명',
-  purchase_date: '2024-01-01',
-  barcode: 'P000006'
-};
-
-const result = await toolsDB.products.add(newProduct);
-
-// 제품 수정
-const updateData = { status: 'Exported' };
-const updated = await toolsDB.products.update(productId, updateData);
-
-// 제품 삭제
-const deleted = await toolsDB.products.delete(productId);
-```
-
-### **3.2 카테고리 관리**
-```javascript
-// 카테고리 목록 조회
-const categories = await toolsDB.categories.getAll();
-
-// 새 카테고리 추가
-const newCategory = await toolsDB.categories.add('새 카테고리명');
-
-// 카테고리 삭제
-const deleted = await toolsDB.categories.delete(categoryId);
-```
-
-### **3.3 반출/반납 관리**
-```javascript
-// 제품 반출
-const exported = await toolsDB.exportHistory.export(
-  productId, 
-  '사용자명', 
-  '현장작업'
-);
-
-// 제품 반납
-const returned = await toolsDB.exportHistory.return(
-  productId, 
-  '반납자명'
-);
-
-// 현재 반출 중인 제품들
-const currentExports = await toolsDB.exportHistory.getCurrentExports();
-```
-
-### **3.4 통계 조회**
-```javascript
-// 전체 통계
-const overallStats = await toolsDB.stats.getOverallStats();
-console.log('전체 제품:', overallStats.total);
-console.log('사용 가능:', overallStats.available);
-console.log('반출됨:', overallStats.exported);
-
-// 카테고리별 통계
-const categoryStats = await toolsDB.stats.getCategoryStats();
-categoryStats.forEach(stat => {
-  console.log(`${stat.category}: ${stat.total}개 (사용가능: ${stat.available}, 반출: ${stat.exported})`);
-});
-```
-
-## **4단계: 에러 처리 및 사용자 경험**
-
-### **4.1 로딩 상태 표시**
-```javascript
-async function loadProducts() {
-  // 로딩 시작
-  document.getElementById('loading').style.display = 'block';
-  
-  try {
-    const products = await toolsDB.products.getAll();
-    renderProducts(products);
-  } catch (error) {
-    showError('제품 목록을 불러오는데 실패했습니다.');
-  } finally {
-    // 로딩 종료
-    document.getElementById('loading').style.display = 'none';
-  }
-}
-```
-
-### **4.2 성공/실패 메시지**
-```javascript
-async function addProduct(productData) {
-  try {
-    const result = await toolsDB.products.add(productData);
-    if (result) {
-      showSuccess('제품이 성공적으로 추가되었습니다.');
-      loadProducts(); // 목록 새로고침
-      return true;
-    }
-  } catch (error) {
-    showError('제품 추가에 실패했습니다: ' + error.message);
-    return false;
-  }
-}
-
-function showSuccess(message) {
-  // 성공 메시지 표시 로직
-  alert('✅ ' + message);
-}
-
-function showError(message) {
-  // 에러 메시지 표시 로직
-  alert('❌ ' + message);
-}
-```
-
-## **5단계: 테스트 및 검증**
-
-### **5.1 기본 기능 테스트**
-1. **제품 추가**: 새 제품을 추가하고 데이터베이스에 저장되는지 확인
-2. **제품 조회**: 추가된 제품이 목록에 표시되는지 확인
-3. **제품 수정**: 제품 정보를 수정하고 변경사항이 반영되는지 확인
-4. **제품 삭제**: 제품을 삭제하고 목록에서 제거되는지 확인
-
-### **5.2 반출/반납 기능 테스트**
-1. **제품 반출**: 제품 상태가 'Exported'로 변경되고 이력이 기록되는지 확인
-2. **제품 반납**: 제품 상태가 'Available'로 변경되고 반납 정보가 업데이트되는지 확인
-3. **이력 조회**: 반출/반납 이력이 올바르게 표시되는지 확인
-
-### **5.3 데이터 무결성 테스트**
-1. **외래키 제약**: 존재하지 않는 제품 ID로 반출 이력을 생성할 수 없는지 확인
-2. **고유값 제약**: 중복된 바코드나 시리얼 번호를 입력할 수 없는지 확인
-3. **필수값 검증**: 필수 필드가 비어있을 때 오류가 발생하는지 확인
-
-## **6단계: 성능 최적화**
-
-### **6.1 쿼리 최적화**
-- 필요한 컬럼만 선택하여 데이터 전송량 최소화
-- 적절한 인덱스 사용으로 검색 성능 향상
-- 페이지네이션을 통한 대용량 데이터 처리
-
-### **6.2 캐싱 전략**
-- 자주 사용되는 데이터는 메모리에 캐싱
-- 변경이 적은 데이터는 주기적으로 새로고침
-- 사용자 입력 데이터는 임시 저장 후 일괄 처리
-
-## **문제 해결**
-
-### **자주 발생하는 오류**
-1. **CORS 오류**: Supabase 프로젝트 설정에서 도메인 허용
-2. **인증 오류**: API 키가 올바른지 확인
-3. **테이블 없음**: SQL 스크립트가 올바르게 실행되었는지 확인
-
-### **디버깅 방법**
-```javascript
-// Supabase 클라이언트 상태 확인
-console.log('Supabase URL:', supabase.supabaseUrl);
-console.log('Supabase Key:', supabase.supabaseKey);
-
-// 쿼리 결과 상세 확인
-const { data, error, count } = await supabase
-  .from('tools_products')
-  .select('*', { count: 'exact' });
-
-console.log('Data:', data);
-console.log('Error:', error);
-console.log('Count:', count);
-```
-
-이제 Supabase와 연동된 공구 관리 시스템을 사용할 수 있습니다! 🚀
+**LHATOOL** - 안전하고 효율적인 공구 관리 시스템! 🚀
