@@ -3,8 +3,8 @@
 
 // Supabase 프로젝트 설정
 // 아래 URL과 키를 본인의 Supabase 프로젝트 정보로 변경하세요
-const supabaseUrl = 'YOUR_SUPABASE_URL_HERE';
-const supabaseAnonKey = 'YOUR_SUPABASE_ANON_KEY_HERE';
+const supabaseUrl = 'https://smtqsqokgfxlmyldeeks.supabase.co';
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNtdHFzcW9rZ2Z4bG15bGRlZWtzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY3Mjg1ODksImV4cCI6MjA2MjMwNDU4OX0.aVQS7Y4aRr19wnoeMNjP-iYVMFxGwMc3AMNKgEwIVuM';
 
 // Supabase 클라이언트 생성 (브라우저용)
 const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey, {

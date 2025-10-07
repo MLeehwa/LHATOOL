@@ -44,8 +44,8 @@ Supabase 기반의 현대적인 공구 관리 웹 애플리케이션입니다. �
 
 ### **1. 저장소 클론**
 ```bash
-git clone https://github.com/MLeehwa/LHATOOL.git
-cd LHATOOL
+git clone https://github.com/MLeehwa/tool-management-system.git
+cd tool-management-system
 ```
 
 ### **2. Supabase 설정 (5분)**
@@ -95,7 +95,7 @@ http://localhost:8000
 ## 📁 프로젝트 구조
 
 ```
-LHATOOL/
+tool-management-system/
 ├── index.html              # 메인 페이지 (로그인 + 모드 선택)
 ├── desktop.html            # 데스크톱 모드 인터페이스
 ├── pda.html               # PDA/태블렛 모드 인터페이스
