@@ -691,6 +691,19 @@ class PDAToolManagement {
             return;
         }
 
+        // 이름 검증: 'P'로 시작하는 입력은 바코드로 간주하여 거부
+        // 특히 'P' 뒤에 숫자가 오는 형태는 스캐너가 이름란에 바코드를 찍은 경우로 처리
+        const upperName = userName.toUpperCase();
+        const looksLikeBarcode = /^P\d+$/i.test(userName);
+        if (upperName.startsWith('P')) {
+            if (looksLikeBarcode) {
+                this.showNotification('이름 입력란에 바코드가 스캔되었습니다. 반출자 이름을 직접 입력해주세요.', 'warning');
+            } else {
+                this.showNotification("'P'로 시작하는 이름은 사용할 수 없습니다. 반출자 이름을 다시 입력해주세요.", 'warning');
+            }
+            return;
+        }
+
         console.log('반출자 이름 확인됨:', userName);
         this.currentExportUser = userName;
         
