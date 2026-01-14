@@ -7,7 +7,8 @@ const supabaseUrl = 'https://smtqsqokgfxlmyldeeks.supabase.co';
 const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNtdHFzcW9rZ2Z4bG15bGRlZWtzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY3Mjg1ODksImV4cCI6MjA2MjMwNDU4OX0.aVQS7Y4aRr19wnoeMNjP-iYVMFxGwMc3AMNKgEwIVuM';
 
 // Supabase 클라이언트 생성 (브라우저용)
-const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey, {
+// 변수명을 supabaseClient로 변경하여 window.supabase와 충돌 방지
+const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseAnonKey, {
   headers: {
     'Accept': 'application/json',
     'Content-Type': 'application/json'
@@ -20,17 +21,17 @@ const toolsDB = {
   users: {
     // 사용자 로그인
     async login(username, password) {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseClient
         .rpc('authenticate_user', {
           p_username: username,
           p_password: password
         });
-      
+
       if (error) {
         console.error('Error authenticating user:', error);
         return null;
       }
-      
+
       if (data && data.length > 0) {
         return data[0];
       }
@@ -44,20 +45,20 @@ const toolsDB = {
         p_old_password: oldPassword,
         p_new_password: newPassword
       };
-      
+
       // 2차 비밀번호가 제공되면 추가
       if (masterPassword) {
         params.p_master_password = masterPassword;
       }
-      
-      const { data, error } = await supabase
+
+      const { data, error } = await supabaseClient
         .rpc('change_user_password', params);
-      
+
       if (error) {
         console.error('Error changing password:', error);
         return false;
       }
-      
+
       return data;
     }
   },
@@ -65,11 +66,11 @@ const toolsDB = {
   products: {
     // 모든 제품 조회
     async getAll() {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseClient
         .from('tools_products')
         .select('*')
         .order('created_at', { ascending: false });
-      
+
       if (error) {
         console.error('Error fetching products:', error);
         return [];
@@ -79,11 +80,11 @@ const toolsDB = {
 
     // 제품 추가
     async add(productData) {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseClient
         .from('tools_products')
         .insert([productData])
         .select();
-      
+
       if (error) {
         console.error('Error adding product:', error);
         return null;
@@ -93,12 +94,12 @@ const toolsDB = {
 
     // 제품 수정
     async update(id, updateData) {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseClient
         .from('tools_products')
         .update(updateData)
         .eq('id', id)
         .select();
-      
+
       if (error) {
         console.error('Error updating product:', error);
         return null;
@@ -108,11 +109,11 @@ const toolsDB = {
 
     // 제품 삭제
     async delete(id) {
-      const { error } = await supabase
+      const { error } = await supabaseClient
         .from('tools_products')
         .delete()
         .eq('id', id);
-      
+
       if (error) {
         console.error('Error deleting product:', error);
         return false;
@@ -122,12 +123,12 @@ const toolsDB = {
 
     // ID로 제품 조회
     async getById(id) {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseClient
         .from('tools_products')
         .select('*')
         .eq('id', id)
         .single();
-      
+
       if (error) {
         console.error('Error fetching product:', error);
         return null;
@@ -140,13 +141,13 @@ const toolsDB = {
       if (!barcode || barcode.trim() === '') {
         return null;
       }
-      
-      const { data, error } = await supabase
+
+      const { data, error } = await supabaseClient
         .from('tools_products')
         .select('*')
         .eq('barcode', barcode.trim())
         .maybeSingle(); // single() 대신 maybeSingle() 사용
-      
+
       if (error) {
         console.error('Error fetching product by barcode:', error);
         return null;
@@ -159,11 +160,11 @@ const toolsDB = {
   categories: {
     // 모든 카테고리 조회
     async getAll() {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseClient
         .from('tools_categories')
         .select('*')
         .order('name');
-      
+
       if (error) {
         console.error('Error fetching categories:', error);
         return [];
@@ -173,12 +174,12 @@ const toolsDB = {
 
     // 카테고리 추가
     async add(categoryData) {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseClient
         .from('tools_categories')
         .insert([categoryData])
         .select()
         .single();
-      
+
       if (error) {
         console.error('Error adding category:', error);
         return null;
@@ -188,11 +189,11 @@ const toolsDB = {
 
     // 카테고리 삭제
     async delete(id) {
-      const { error } = await supabase
+      const { error } = await supabaseClient
         .from('tools_categories')
         .delete()
         .eq('id', id);
-      
+
       if (error) {
         console.error('Error deleting category:', error);
         return false;
@@ -205,7 +206,7 @@ const toolsDB = {
   exportHistory: {
     // 모든 반출 이력 조회
     async getAll() {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseClient
         .from('tools_export_history')
         .select(`
           *,
@@ -217,7 +218,7 @@ const toolsDB = {
           )
         `)
         .order('export_date', { ascending: false });
-      
+
       if (error) {
         console.error('Error fetching export history:', error);
         return [];
@@ -227,12 +228,12 @@ const toolsDB = {
 
     // 제품별 반출 이력 조회
     async getByProductId(productId) {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseClient
         .from('tools_export_history')
         .select('*')
         .eq('product_id', productId)
         .order('export_date', { ascending: false });
-      
+
       if (error) {
         console.error('Error fetching export history by product:', error);
         return [];
@@ -243,67 +244,67 @@ const toolsDB = {
     // 제품 반출 처리
     async export(productId, exportedBy, purpose = '현장작업') {
       // 1. 제품 상태를 'Exported'로 변경
-      const { error: updateError } = await supabase
+      const { error: updateError } = await supabaseClient
         .from('tools_products')
         .update({ status: 'Exported' })
         .eq('id', productId);
-      
+
       if (updateError) {
         console.error('Error updating product status:', updateError);
         return false;
       }
-      
+
       // 2. 반출 이력 추가
-      const { error: historyError } = await supabase
+      const { error: historyError } = await supabaseClient
         .from('tools_export_history')
         .insert([{
           product_id: productId,
           exported_by: exportedBy,
           export_purpose: purpose
         }]);
-      
+
       if (historyError) {
         console.error('Error adding export history:', historyError);
         return false;
       }
-      
+
       return true;
     },
 
     // 제품 반납 처리
     async return(productId, returnedBy) {
       // 1. 제품 상태를 'Available'로 변경
-      const { error: updateError } = await supabase
+      const { error: updateError } = await supabaseClient
         .from('tools_products')
         .update({ status: 'Available' })
         .eq('id', productId);
-      
+
       if (updateError) {
         console.error('Error updating product status:', updateError);
         return false;
       }
-      
+
       // 2. 반출 이력에 반납 정보 업데이트
-      const { error: historyError } = await supabase
+      const { error: historyError } = await supabaseClient
         .from('tools_export_history')
-        .update({ 
+        .update({
           return_date: new Date().toISOString(),
           returned_by: returnedBy
         })
         .eq('product_id', productId)
         .is('return_date', null);
-      
+
       if (historyError) {
         console.error('Error updating export history:', historyError);
         return false;
       }
-      
+
       return true;
     },
 
     // 현재 반출 중인 제품들 조회
     async getCurrentExports() {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseClient
         .from('tools_export_history')
         .select(`
           *,
@@ -316,7 +317,7 @@ const toolsDB = {
         `)
         .is('return_date', null)
         .order('export_date', { ascending: false });
-      
+
       if (error) {
         console.error('Error fetching current exports:', error);
         return [];
@@ -329,21 +330,21 @@ const toolsDB = {
   stats: {
     // 전체 통계 조회
     async getOverallStats() {
-      const { data: products, error: productsError } = await supabase
+      const { data: products, error: productsError } = await supabaseClient
         .from('tools_products')
         .select('status');
-      
+
       if (productsError) {
         console.error('Error fetching products for stats:', productsError);
         return null;
       }
-      
+
       const total = products.length;
       const available = products.filter(p => p.status === 'Available').length;
       const exported = products.filter(p => p.status === 'Exported').length;
       const maintenance = products.filter(p => p.status === 'Under Maintenance').length;
       const retired = products.filter(p => p.status === 'Retired').length;
-      
+
       return {
         total,
         available,
@@ -355,15 +356,15 @@ const toolsDB = {
 
     // 카테고리별 통계
     async getCategoryStats() {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseClient
         .from('tools_products')
         .select('category, status');
-      
+
       if (error) {
         console.error('Error fetching category stats:', error);
         return [];
       }
-      
+
       const stats = {};
       data.forEach(product => {
         if (!stats[product.category]) {
@@ -376,7 +377,7 @@ const toolsDB = {
           stats[product.category].exported++;
         }
       });
-      
+
       return Object.entries(stats).map(([category, counts]) => ({
         category,
         ...counts
