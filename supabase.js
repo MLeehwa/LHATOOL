@@ -387,4 +387,4 @@ const toolsDB = {
 
 // 전역 객체로 사용할 수 있도록 window에 할당
 window.toolsDB = toolsDB;
-window.supabase = supabase;
+// window.supabase는 CDN에서 이미 정의되어 있으므로 덮어쓰지 않음
